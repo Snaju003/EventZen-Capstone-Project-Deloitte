@@ -1,15 +1,21 @@
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { KeyRound } from "lucide-react";
+import { Link, useLocation } from "react-router-dom";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
 import { InputField } from "@/components/ui/InputField";
 import { LogoIcon, LockIcon } from "@/components/ui/Icons";
+import { getFieldErrors, resetPasswordSchema } from "@/lib/auth-schemas";
 
 const ResetPasswordPage = () => {
-  const navigate = useNavigate();
+  const location = useLocation();
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
+  const [errors, setErrors] = useState({});
+  const [submitError, setSubmitError] = useState("");
+  const [statusMessage] = useState(location.state?.statusMessage || "");
 
   const passwordMismatch =
     confirmPassword.length > 0 && password !== confirmPassword;
@@ -28,10 +34,21 @@ const ResetPasswordPage = () => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (passwordMismatch || passwordRequirements.some((r) => !r.isMet)) return;
-    // TODO: wire up reset password logic
-    console.log("Reset Password:", { password });
-    navigate("/success-message");
+    setErrors({});
+
+    const parsedValues = resetPasswordSchema.safeParse({
+      password,
+      confirmPassword,
+    });
+
+    if (!parsedValues.success) {
+      setErrors(getFieldErrors(parsedValues.error));
+      return;
+    }
+
+    setSubmitError(
+      "No password reset endpoint was provided in the available auth API, so this form is currently limited to client-side validation.",
+    );
   };
 
   return (
@@ -60,6 +77,22 @@ const ResetPasswordPage = () => {
 
         {/* Form */}
         <form onSubmit={handleSubmit} noValidate>
+          {statusMessage ? (
+            <Alert className="mb-4 grid gap-1 rounded-xl border-emerald-200 bg-emerald-50 text-emerald-800">
+              <AlertTitle>OTP verified</AlertTitle>
+              <AlertDescription className="text-emerald-700">
+                {statusMessage}
+              </AlertDescription>
+            </Alert>
+          ) : null}
+
+          {submitError ? (
+            <Alert variant="destructive" className="mb-4 grid gap-1 rounded-xl">
+              <AlertTitle>Reset API not available</AlertTitle>
+              <AlertDescription>{submitError}</AlertDescription>
+            </Alert>
+          ) : null}
+
           {passwordMismatch ? (
             <Alert
               variant="destructive"
@@ -90,6 +123,9 @@ const ResetPasswordPage = () => {
             showPassword={showPassword}
             onToggle={() => setShowPassword((p) => !p)}
             requirements={passwordRequirements}
+            error={errors.password?.[0]}
+            ariaDescribedBy="reset-password-error"
+            autoComplete="new-password"
           />
           <InputField
             label="Confirm new password"
@@ -101,17 +137,19 @@ const ResetPasswordPage = () => {
             showToggle
             showPassword={showConfirm}
             onToggle={() => setShowConfirm((p) => !p)}
-            error={passwordMismatch ? "Passwords do not match." : ""}
+            error={errors.confirmPassword?.[0] || (passwordMismatch ? "Passwords do not match." : "")}
             ariaDescribedBy="confirm-error"
+            autoComplete="new-password"
           />
 
-          <button
+          <Button
             type="submit"
             disabled={passwordMismatch || passwordRequirements.some((r) => !r.isMet) || !password}
-            className="w-full h-11 rounded-[10px] bg-[#2e4057] text-white text-[0.9375rem] font-semibold hover:bg-[#253449] active:scale-[0.985] disabled:opacity-50 disabled:cursor-not-allowed transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#2e4057] mt-4"
+            className="mt-4 w-full"
           >
+            <KeyRound className="size-4" />
             Reset password
-          </button>
+          </Button>
         </form>
 
         {/* Footer link */}

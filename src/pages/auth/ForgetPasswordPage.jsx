@@ -1,17 +1,52 @@
 import { useState } from "react";
+import { MailCheck } from "lucide-react";
+import { z } from "zod";
 import { Link, useNavigate } from "react-router-dom";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import { useAuth } from "@/hooks/useAuth";
 import { InputField } from "@/components/ui/InputField";
 import { LogoIcon, MailIcon } from "@/components/ui/Icons";
+import { getApiErrorMessage } from "@/lib/auth-api";
+import { emailSchema } from "@/lib/auth-schemas";
 
 const ForgetPasswordPage = () => {
   const navigate = useNavigate();
+  const { isLoading, requestPasswordOtp } = useAuth();
   const [email, setEmail] = useState("");
+  const [error, setError] = useState("");
+  const [submitError, setSubmitError] = useState("");
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!email.trim()) return;
-    navigate("/verify-otp");
+    setError("");
+    setSubmitError("");
+
+    const parsedEmail = emailSchema.safeParse(email);
+    if (!parsedEmail.success) {
+      setError(parsedEmail.error.issues[0]?.message || "Enter a valid email address.");
+      return;
+    }
+
+    try {
+      const result = await requestPasswordOtp(parsedEmail.data);
+      navigate("/verify-otp", {
+        state: {
+          email: parsedEmail.data,
+          purpose: "password-reset",
+          statusMessage: result.message || "We sent a verification code to your email.",
+        },
+      });
+    } catch (apiError) {
+      if (apiError instanceof z.ZodError) {
+        setError(apiError.issues[0]?.message || "Enter a valid email address.");
+        return;
+      }
+
+      setSubmitError(
+        getApiErrorMessage(apiError, "We could not send the OTP. Please try again."),
+      );
+    }
   };
 
   return (
@@ -41,6 +76,13 @@ const ForgetPasswordPage = () => {
         </div>
 
         <form onSubmit={handleSubmit} noValidate>
+          {submitError ? (
+            <Alert variant="destructive" className="mb-4 grid gap-1 rounded-xl">
+              <AlertTitle>Unable to send OTP</AlertTitle>
+              <AlertDescription>{submitError}</AlertDescription>
+            </Alert>
+          ) : null}
+
           <Alert className="mb-4 grid gap-1 rounded-xl">
             <AlertTitle>Check your inbox carefully</AlertTitle>
             <AlertDescription>
@@ -55,14 +97,19 @@ const ForgetPasswordPage = () => {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             icon={<MailIcon />}
+            error={error}
+            ariaDescribedBy="forgot-password-email-error"
+            autoComplete="email"
           />
 
-          <button
+          <Button
             type="submit"
-            className="w-full h-11 rounded-[10px] bg-[#2e4057] text-white text-[0.9375rem] font-semibold hover:bg-[#253449] active:scale-[0.985] transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#2e4057] mt-1"
+            className="mt-1 w-full"
+            disabled={isLoading}
           >
-            Send OTP
-          </button>
+            <MailCheck className="size-4" />
+            {isLoading ? "Sending OTP..." : "Send OTP"}
+          </Button>
         </form>
 
         <div className="mt-6 text-center text-sm text-slate-500">

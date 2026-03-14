@@ -1,6 +1,20 @@
 import { EyeOffIcon, EyeOnIcon, CheckIcon, CircleIcon } from "@/components/ui/Icons";
 
-export const InputField = ({ label, type, placeholder, value, onChange, icon, showToggle, showPassword, onToggle, error, requirements, ariaDescribedBy }) => (
+export const InputField = ({
+  label,
+  type,
+  placeholder,
+  value,
+  onChange,
+  icon,
+  showToggle,
+  showPassword,
+  onToggle,
+  error,
+  requirements,
+  ariaDescribedBy,
+  ...props
+}) => (
   <div className="mb-4">
     <label className="block text-sm font-medium text-slate-700 mb-1.5">{label}</label>
     <div className="relative">
@@ -14,6 +28,7 @@ export const InputField = ({ label, type, placeholder, value, onChange, icon, sh
         onChange={onChange}
         aria-invalid={!!error}
         aria-describedby={ariaDescribedBy}
+        {...props}
         className={`w-full h-11 rounded-[10px] border bg-white text-slate-900 pl-9 pr-10 text-sm placeholder:text-slate-400 outline-none transition-all focus:ring-2 focus:ring-[#2e4057] focus:border-transparent ${
           error ? "border-red-400 ring-2 ring-red-100" : "border-slate-200"
         }`}

@@ -1,6 +1,5 @@
 import * as React from "react";
-
-const cn = (...classes) => classes.filter(Boolean).join(" ");
+import { cn } from "@/lib/utils";
 
 const alertVariants = {
   default: "border-slate-200 bg-slate-50 text-slate-800",

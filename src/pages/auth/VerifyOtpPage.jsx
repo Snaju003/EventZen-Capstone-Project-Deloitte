@@ -1,13 +1,33 @@
 import { useRef, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { BadgeCheck, RotateCcw } from "lucide-react";
+import { z } from "zod";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import { useAuth } from "@/hooks/useAuth";
 import { LogoIcon } from "@/components/ui/Icons";
+import { getApiErrorMessage } from "@/lib/auth-api";
+import { getFieldErrors, verifyOtpSchema } from "@/lib/auth-schemas";
 
 const VerifyOtpPage = () => {
+  const location = useLocation();
   const navigate = useNavigate();
+  const {
+    isLoading,
+    pendingVerification,
+    resendOtp,
+    setPendingVerification,
+    verifyOtp,
+  } = useAuth();
   const [otp, setOtp] = useState(["", "", "", "", "", ""]);
   const [showResentAlert, setShowResentAlert] = useState(false);
+  const [submitError, setSubmitError] = useState("");
+  const [statusMessage, setStatusMessage] = useState(
+    location.state?.statusMessage || "",
+  );
   const inputRefs = useRef([]);
+  const currentEmail = location.state?.email || pendingVerification.email;
+  const currentPurpose = location.state?.purpose || pendingVerification.purpose;
 
   const isComplete = otp.every((digit) => digit !== "");
 
@@ -30,17 +50,83 @@ const VerifyOtpPage = () => {
     }
   };
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault();
-    if (!isComplete) return;
+    setSubmitError("");
+    if (!isComplete || !currentEmail) return;
     setShowResentAlert(false);
-    navigate("/reset-password");
+
+    const otpValue = otp.join("");
+    const parsedValues = verifyOtpSchema.safeParse({
+      email: currentEmail,
+      otp: otpValue,
+    });
+
+    if (!parsedValues.success) {
+      setSubmitError(
+        getFieldErrors(parsedValues.error).otp?.[0] ||
+          parsedValues.error.issues[0]?.message,
+      );
+      return;
+    }
+
+    try {
+      const result = await verifyOtp(parsedValues.data);
+
+      if (currentPurpose === "password-reset") {
+        navigate("/reset-password", {
+          state: {
+            email: currentEmail,
+            statusMessage: result.message || "OTP verified successfully.",
+          },
+        });
+        return;
+      }
+
+      navigate("/", {
+        state: {
+          activeTab: "login",
+          statusMessage: result.message || "Account verified. You can now log in.",
+        },
+      });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        setSubmitError(
+          getFieldErrors(error).otp?.[0] || error.issues[0]?.message,
+        );
+        return;
+      }
+
+      setSubmitError(
+        getApiErrorMessage(error, "OTP verification failed. Please try again."),
+      );
+    }
   };
 
-  const handleResend = () => {
+  const handleResend = async () => {
     setOtp(["", "", "", "", "", ""]);
-    setShowResentAlert(true);
-    inputRefs.current[0]?.focus();
+    setSubmitError("");
+
+    if (!currentEmail) {
+      setSubmitError("We could not find the email for this verification attempt.");
+      return;
+    }
+
+    try {
+      await resendOtp(currentEmail);
+      setPendingVerification({
+        email: currentEmail,
+        purpose: currentPurpose || "register",
+      });
+      setShowResentAlert(true);
+      setStatusMessage("");
+      inputRefs.current[0]?.focus();
+    } catch (error) {
+      setShowResentAlert(false);
+      setSubmitError(
+        getApiErrorMessage(error, "We could not resend the OTP. Please try again."),
+      );
+    }
   };
 
   return (
@@ -70,12 +156,30 @@ const VerifyOtpPage = () => {
         </div>
 
         <form onSubmit={handleSubmit} noValidate>
+          {statusMessage ? (
+            <Alert className="mb-4 grid gap-1 rounded-xl border-emerald-200 bg-emerald-50 text-emerald-800">
+              <AlertTitle>Code sent</AlertTitle>
+              <AlertDescription className="text-emerald-700">
+                {statusMessage}
+              </AlertDescription>
+            </Alert>
+          ) : null}
+
           <Alert className="mb-4 grid gap-1 rounded-xl">
             <AlertTitle>Enter the latest code</AlertTitle>
             <AlertDescription>
-              If you requested a new OTP, only the most recently sent code will work.
+              {currentEmail
+                ? `Enter the 6-digit code sent to ${currentEmail}.`
+                : "If you requested a new OTP, only the most recently sent code will work."}
             </AlertDescription>
           </Alert>
+
+          {submitError ? (
+            <Alert variant="destructive" className="mb-4 grid gap-1 rounded-xl">
+              <AlertTitle>Verification failed</AlertTitle>
+              <AlertDescription>{submitError}</AlertDescription>
+            </Alert>
+          ) : null}
 
           {showResentAlert ? (
             <Alert className="mb-4 grid gap-1 rounded-xl border-emerald-200 bg-emerald-50 text-emerald-800">
@@ -106,24 +210,29 @@ const VerifyOtpPage = () => {
             ))}
           </fieldset>
 
-          <button
+          <Button
             type="submit"
-            disabled={!isComplete}
-            className="w-full h-11 rounded-[10px] bg-[#2e4057] text-white text-[0.9375rem] font-semibold hover:bg-[#253449] active:scale-[0.985] disabled:opacity-50 disabled:cursor-not-allowed transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#2e4057]"
+            disabled={!isComplete || !currentEmail || isLoading}
+            className="w-full"
           >
-            Verify OTP
-          </button>
+            <BadgeCheck className="size-4" />
+            {isLoading ? "Verifying..." : "Verify OTP"}
+          </Button>
         </form>
 
         <div className="mt-6 text-center text-sm text-slate-500">
           Didn't receive the code?{" "}
-          <button
+          <Button
             type="button"
             onClick={handleResend}
-            className="font-semibold text-[#2e4057] hover:underline"
+            variant="link"
+            size="sm"
+            className="h-auto p-0 align-baseline"
+            disabled={isLoading || !currentEmail}
           >
+            <RotateCcw className="size-3.5" />
             Resend
-          </button>
+          </Button>
         </div>
 
         <div className="mt-2 text-center text-sm text-slate-500">

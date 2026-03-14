@@ -1,5 +1,7 @@
+import { CircleCheckBig, LogIn } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
 
 const SuccessMessagePage = () => {
   return (
@@ -8,20 +10,7 @@ const SuccessMessagePage = () => {
         <section className='max-w-md w-full text-center'>
           <div className='flex justify-center mb-8'>
             <div className='bg-emerald-50 rounded-full p-6 inline-flex items-center justify-center'>
-              <svg
-                className='w-16 h-16 text-[#1D9E75]'
-                fill='none'
-                stroke='currentColor'
-                viewBox='0 0 24 24'
-                xmlns='http://www.w3.org/2000/svg'
-              >
-                <path
-                  strokeLinecap='round'
-                  strokeLinejoin='round'
-                  strokeWidth='2.5'
-                  d='M5 13l4 4L19 7'
-                ></path>
-              </svg>
+              <CircleCheckBig className='w-16 h-16 text-[#1D9E75]' strokeWidth={2.25} />
             </div>
           </div>
 
@@ -42,12 +31,12 @@ const SuccessMessagePage = () => {
           </Alert>
 
           <div className='mb-8'>
-            <Link
-              to='/'
-              className='block w-full bg-[#2E4057] hover:bg-[#233142] text-white font-semibold py-4 px-6 rounded-lg transition-colors text-lg'
-            >
-              Back to Login
-            </Link>
+            <Button asChild className='w-full text-base'>
+              <Link to='/'>
+                <LogIn className='size-4' />
+                Back to Login
+              </Link>
+            </Button>
           </div>
         </section>
       </main>

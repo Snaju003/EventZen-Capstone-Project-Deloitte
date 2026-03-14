@@ -1,16 +1,26 @@
 import { useState } from "react";
+import { BadgePlus } from "lucide-react";
+import { z } from "zod";
 import { useNavigate } from "react-router-dom";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
 import { InputField } from "@/components/ui/InputField";
 import { MailIcon, LockIcon, UserIcon } from "@/components/ui/Icons";
+import { useAuth } from "@/hooks/useAuth";
+import { getApiErrorMessage } from "@/lib/auth-api";
+import { getFieldErrors, registerSchema } from "@/lib/auth-schemas";
 
 export const RegisterForm = () => {
   const navigate = useNavigate();
+  const { isLoading, register } = useAuth();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
+  const [errors, setErrors] = useState({});
+  const [submitError, setSubmitError] = useState("");
 
   const passwordMismatch =
     confirmPassword.length > 0 && password !== confirmPassword;
@@ -27,16 +37,49 @@ export const RegisterForm = () => {
     },
   ];
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    if (passwordMismatch || passwordRequirements.some((r) => !r.isMet)) return;
-    // TODO: wire up registration logic
-    console.log("Register:", { name, email, password });
-    navigate("/verify-otp");
+    setErrors({});
+    setSubmitError("");
+
+    const values = { name, email, password, confirmPassword };
+    const parsedValues = registerSchema.safeParse(values);
+
+    if (!parsedValues.success) {
+      setErrors(getFieldErrors(parsedValues.error));
+      return;
+    }
+
+    try {
+      const result = await register(parsedValues.data);
+      navigate("/verify-otp", {
+        state: {
+          email: parsedValues.data.email,
+          purpose: "register",
+          statusMessage: result.message || "We sent a verification code to your email.",
+        },
+      });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        setErrors(getFieldErrors(error));
+        return;
+      }
+
+      setSubmitError(
+        getApiErrorMessage(error, "Registration failed. Please try again."),
+      );
+    }
   };
 
   return (
     <form onSubmit={handleSubmit} noValidate>
+      {submitError ? (
+        <Alert variant="destructive" className="mb-4 grid gap-1 rounded-xl">
+          <AlertTitle>Registration failed</AlertTitle>
+          <AlertDescription>{submitError}</AlertDescription>
+        </Alert>
+      ) : null}
+
       <InputField
         label="Full name"
         type="text"
@@ -44,6 +87,9 @@ export const RegisterForm = () => {
         value={name}
         onChange={(e) => setName(e.target.value)}
         icon={<UserIcon />}
+        error={errors.name?.[0]}
+        ariaDescribedBy="register-name-error"
+        autoComplete="name"
       />
       <InputField
         label="Email"
@@ -52,6 +98,9 @@ export const RegisterForm = () => {
         value={email}
         onChange={(e) => setEmail(e.target.value)}
         icon={<MailIcon />}
+        error={errors.email?.[0]}
+        ariaDescribedBy="register-email-error"
+        autoComplete="email"
       />
       <InputField
         label="Password"
@@ -64,6 +113,9 @@ export const RegisterForm = () => {
         showPassword={showPassword}
         onToggle={() => setShowPassword((p) => !p)}
         requirements={passwordRequirements}
+        error={errors.password?.[0]}
+        ariaDescribedBy="register-password-error"
+        autoComplete="new-password"
       />
       <InputField
         label="Re-enter password"
@@ -75,16 +127,19 @@ export const RegisterForm = () => {
         showToggle
         showPassword={showConfirm}
         onToggle={() => setShowConfirm((p) => !p)}
-        error={passwordMismatch ? "Passwords do not match." : ""}
+        error={errors.confirmPassword?.[0] || (passwordMismatch ? "Passwords do not match." : "")}
         ariaDescribedBy="confirm-error"
+        autoComplete="new-password"
       />
 
-      <button
+      <Button
         type="submit"
-        className="w-full h-11 rounded-[10px] bg-[#2e4057] text-white text-[0.9375rem] font-semibold hover:bg-[#253449] active:scale-[0.985] transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#2e4057] mt-1"
+        className="mt-1 w-full"
+        disabled={isLoading}
       >
-        Create account
-      </button>
+        <BadgePlus className="size-4" />
+        {isLoading ? "Creating account..." : "Create account"}
+      </Button>
     </form>
   );
 };
