@@ -1,0 +1,25 @@
+version: "3.9"
+
+services:
+  mongodb:
+    image: mongo:7
+    container_name: eventzen-mongo
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+
+  budget-service:
+    build: .
+    container_name: budget-service
+    ports:
+      - "${SERVER_PORT:-8081}:${SERVER_PORT:-8081}"
+    env_file:
+      - .env
+    environment:
+      - MONGO_URI=mongodb://mongodb:27017/eventzen
+    depends_on:
+      - mongodb
+
+volumes:
+  mongo_data:
