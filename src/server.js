@@ -1,0 +1,23 @@
+// src/server.js
+require("dotenv").config();
+require("dotenv").config({ path: ".env.local", override: true });
+
+const app = require("./app");
+const connectDB = require("./config/db.config");
+
+const PORT = process.env.PORT || 3001;
+
+const startServer = async () => {
+  try {
+    await connectDB();
+
+    app.listen(PORT, () => {
+      console.log(`Auth Service running on port ${PORT}`);
+    });
+  } catch (error) {
+    console.error("Failed to start service:", error.message);
+    process.exit(1);
+  }
+};
+
+startServer();
