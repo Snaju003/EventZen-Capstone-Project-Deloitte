@@ -1,9 +1,9 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { BadgeCheck, RotateCcw } from "lucide-react";
 import { z } from "zod";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+import toast from "react-hot-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { LogoIcon } from "@/components/ui/Icons";
 import { getApiErrorMessage } from "@/lib/auth-api";
@@ -18,18 +18,38 @@ const VerifyOtpPage = () => {
     resendOtp,
     setPendingVerification,
     verifyOtp,
+    verifyResetOtp,
   } = useAuth();
   const [otp, setOtp] = useState(["", "", "", "", "", ""]);
-  const [showResentAlert, setShowResentAlert] = useState(false);
-  const [submitError, setSubmitError] = useState("");
-  const [statusMessage, setStatusMessage] = useState(
-    location.state?.statusMessage || "",
-  );
   const inputRefs = useRef([]);
   const currentEmail = location.state?.email || pendingVerification.email;
   const currentPurpose = location.state?.purpose || pendingVerification.purpose;
 
   const isComplete = otp.every((digit) => digit !== "");
+
+  const getPostLoginPath = (nextUser) => {
+    const normalizedRole = nextUser?.role?.toLowerCase();
+    return normalizedRole === "admin" || normalizedRole === "vendor"
+      ? "/admin/dashboard"
+      : "/profile";
+  };
+
+  useEffect(() => {
+    const statusMessage = location.state?.statusMessage;
+
+    if (!statusMessage) return;
+
+    toast.success(statusMessage, { id: "otp-status" });
+
+    // Consume one-time navigation message so it does not replay on refresh.
+    navigate(location.pathname, {
+      replace: true,
+      state: {
+        email: location.state?.email,
+        purpose: location.state?.purpose,
+      },
+    });
+  }, [location.pathname, location.state, navigate]);
 
   const handleChange = (index, value) => {
     if (!/^\d*$/.test(value)) return;
@@ -52,9 +72,7 @@ const VerifyOtpPage = () => {
 
   const handleSubmit = async (event) => {
     event.preventDefault();
-    setSubmitError("");
     if (!isComplete || !currentEmail) return;
-    setShowResentAlert(false);
 
     const otpValue = otp.join("");
     const parsedValues = verifyOtpSchema.safeParse({
@@ -63,52 +81,77 @@ const VerifyOtpPage = () => {
     });
 
     if (!parsedValues.success) {
-      setSubmitError(
+      toast.error(
         getFieldErrors(parsedValues.error).otp?.[0] ||
-          parsedValues.error.issues[0]?.message,
+        parsedValues.error.issues[0]?.message,
+        { id: "otp-error" },
       );
       return;
     }
 
     try {
-      const result = await verifyOtp(parsedValues.data);
-
       if (currentPurpose === "password-reset") {
+        const result = await verifyResetOtp(parsedValues.data);
         navigate("/reset-password", {
           state: {
             email: currentEmail,
+            resetToken: result.resetToken,
             statusMessage: result.message || "OTP verified successfully.",
           },
         });
         return;
       }
 
-      navigate("/", {
-        state: {
-          activeTab: "login",
-          statusMessage: result.message || "Account verified. You can now log in.",
-        },
-      });
+      const result = await verifyOtp(parsedValues.data);
+      const postLoginPath = getPostLoginPath(result?.user);
+
+      // Registration OTP success should land on the role-appropriate home.
+      if (currentPurpose === "register") {
+        navigate(postLoginPath, {
+          state: {
+            statusMessage: "Login successful. Welcome!",
+          },
+          replace: true,
+        });
+        return;
+      }
+
+      if (result.isLoggedIn) {
+        navigate(postLoginPath, {
+          state: {
+            statusMessage: result.message || "Login successful. Welcome!",
+          },
+          replace: true,
+        });
+      } else {
+        navigate("/", {
+          state: {
+            activeTab: "login",
+            statusMessage: result.message || "Account verified. You can now log in.",
+          },
+        });
+      }
     } catch (error) {
       if (error instanceof z.ZodError) {
-        setSubmitError(
+        toast.error(
           getFieldErrors(error).otp?.[0] || error.issues[0]?.message,
+          { id: "otp-error" },
         );
         return;
       }
 
-      setSubmitError(
+      toast.error(
         getApiErrorMessage(error, "OTP verification failed. Please try again."),
+        { id: "otp-error" },
       );
     }
   };
 
   const handleResend = async () => {
     setOtp(["", "", "", "", "", ""]);
-    setSubmitError("");
 
     if (!currentEmail) {
-      setSubmitError("We could not find the email for this verification attempt.");
+      toast.error("We could not find the email for this verification attempt.", { id: "otp-error" });
       return;
     }
 
@@ -118,13 +161,12 @@ const VerifyOtpPage = () => {
         email: currentEmail,
         purpose: currentPurpose || "register",
       });
-      setShowResentAlert(true);
-      setStatusMessage("");
+      toast.success("A fresh 6-digit code has been sent. Please check your email.", { id: "otp-resent" });
       inputRefs.current[0]?.focus();
     } catch (error) {
-      setShowResentAlert(false);
-      setSubmitError(
+      toast.error(
         getApiErrorMessage(error, "We could not resend the OTP. Please try again."),
+        { id: "otp-error" },
       );
     }
   };
@@ -156,39 +198,11 @@ const VerifyOtpPage = () => {
         </div>
 
         <form onSubmit={handleSubmit} noValidate>
-          {statusMessage ? (
-            <Alert className="mb-4 grid gap-1 rounded-xl border-emerald-200 bg-emerald-50 text-emerald-800">
-              <AlertTitle>Code sent</AlertTitle>
-              <AlertDescription className="text-emerald-700">
-                {statusMessage}
-              </AlertDescription>
-            </Alert>
-          ) : null}
-
-          <Alert className="mb-4 grid gap-1 rounded-xl">
-            <AlertTitle>Enter the latest code</AlertTitle>
-            <AlertDescription>
-              {currentEmail
-                ? `Enter the 6-digit code sent to ${currentEmail}.`
-                : "If you requested a new OTP, only the most recently sent code will work."}
-            </AlertDescription>
-          </Alert>
-
-          {submitError ? (
-            <Alert variant="destructive" className="mb-4 grid gap-1 rounded-xl">
-              <AlertTitle>Verification failed</AlertTitle>
-              <AlertDescription>{submitError}</AlertDescription>
-            </Alert>
-          ) : null}
-
-          {showResentAlert ? (
-            <Alert className="mb-4 grid gap-1 rounded-xl border-emerald-200 bg-emerald-50 text-emerald-800">
-              <AlertTitle>OTP sent again</AlertTitle>
-              <AlertDescription className="text-emerald-700">
-                A fresh 6-digit code has been sent. Please check your email.
-              </AlertDescription>
-            </Alert>
-          ) : null}
+          <p className="mb-4 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">
+            {currentEmail
+              ? `Enter the 6-digit code sent to ${currentEmail}.`
+              : "If you requested a new OTP, only the most recently sent code will work."}
+          </p>
 
           <fieldset className="flex justify-center gap-2 sm:gap-3 mb-7">
             {otp.map((digit, index) => (

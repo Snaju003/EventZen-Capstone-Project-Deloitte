@@ -1,29 +1,27 @@
 import { useState } from "react";
 import { ArrowRight } from "lucide-react";
 import { z } from "zod";
-import { Link } from "react-router-dom";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { InputField } from "@/components/ui/InputField";
 import { MailIcon, LockIcon } from "@/components/ui/Icons";
 import { useAuth } from "@/hooks/useAuth";
 import { getApiErrorMessage } from "@/lib/auth-api";
 import { getFieldErrors, loginSchema } from "@/lib/auth-schemas";
+import toast from "react-hot-toast";
 
 export const LoginForm = () => {
-  const { isLoading, isAuthenticated, login, user } = useAuth();
+  const { isLoading, login } = useAuth();
+  const navigate = useNavigate();
+  const location = useLocation();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [errors, setErrors] = useState({});
-  const [submitError, setSubmitError] = useState("");
-  const [successMessage, setSuccessMessage] = useState("");
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setErrors({});
-    setSubmitError("");
-    setSuccessMessage("");
 
     const values = { email, password };
     const parsedValues = loginSchema.safeParse(values);
@@ -35,34 +33,25 @@ export const LoginForm = () => {
 
     try {
       const result = await login(parsedValues.data);
-      setSuccessMessage(result.message || "You are now logged in.");
+      const welcomeName = result?.user?.name ? `, ${result.user.name}` : '';
+      const normalizedRole = result?.user?.role?.toLowerCase();
+      const fallbackPath = normalizedRole === "admin" || normalizedRole === "vendor" ? "/admin/dashboard" : "/profile";
+      navigate(location.state?.from || fallbackPath, {
+        replace: true,
+        state: { statusMessage: result?.message || `Welcome back${welcomeName}!` },
+      });
     } catch (error) {
       if (error instanceof z.ZodError) {
         setErrors(getFieldErrors(error));
         return;
       }
 
-      setSubmitError(getApiErrorMessage(error, "Login failed. Please try again."));
+      toast.error(getApiErrorMessage(error, "Login failed. Please try again."), { id: "login-error" });
     }
   };
 
   return (
     <form onSubmit={handleSubmit} noValidate>
-      {submitError ? (
-        <Alert variant="destructive" className="mb-4 grid gap-1 rounded-xl">
-          <AlertTitle>Login failed</AlertTitle>
-          <AlertDescription>{submitError}</AlertDescription>
-        </Alert>
-      ) : null}
-
-      {successMessage || isAuthenticated ? (
-        <Alert className="mb-4 grid gap-1 rounded-xl border-emerald-200 bg-emerald-50 text-emerald-800">
-          <AlertTitle>Signed in</AlertTitle>
-          <AlertDescription className="text-emerald-700">
-            {successMessage || `Welcome back${user?.name ? `, ${user.name}` : ""}.`}
-          </AlertDescription>
-        </Alert>
-      ) : null}
 
       <InputField
         label="Email"

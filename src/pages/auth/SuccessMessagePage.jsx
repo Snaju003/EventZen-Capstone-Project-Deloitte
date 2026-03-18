@@ -1,6 +1,5 @@
 import { CircleCheckBig, LogIn } from "lucide-react";
 import { Link } from "react-router-dom";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 
 const SuccessMessagePage = () => {
@@ -23,12 +22,9 @@ const SuccessMessagePage = () => {
             secure and you can proceed to log in with your new credentials.
           </p>
 
-          <Alert className='mb-8 grid gap-1 rounded-xl border-emerald-200 bg-emerald-50 text-left text-emerald-800'>
-            <AlertTitle>Password updated</AlertTitle>
-            <AlertDescription className='text-emerald-700'>
-              Use your new password the next time you sign in to EventZen.
-            </AlertDescription>
-          </Alert>
+          <p className='mb-8 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-left text-sm text-emerald-700'>
+            Use your new password the next time you sign in to EventZen.
+          </p>
 
           <div className='mb-8'>
             <Button asChild className='w-full text-base'>

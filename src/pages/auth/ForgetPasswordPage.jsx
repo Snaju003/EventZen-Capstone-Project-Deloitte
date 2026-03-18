@@ -2,8 +2,8 @@ import { useState } from "react";
 import { MailCheck } from "lucide-react";
 import { z } from "zod";
 import { Link, useNavigate } from "react-router-dom";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+import toast from "react-hot-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { InputField } from "@/components/ui/InputField";
 import { LogoIcon, MailIcon } from "@/components/ui/Icons";
@@ -15,12 +15,10 @@ const ForgetPasswordPage = () => {
   const { isLoading, requestPasswordOtp } = useAuth();
   const [email, setEmail] = useState("");
   const [error, setError] = useState("");
-  const [submitError, setSubmitError] = useState("");
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
-    setSubmitError("");
 
     const parsedEmail = emailSchema.safeParse(email);
     if (!parsedEmail.success) {
@@ -43,8 +41,9 @@ const ForgetPasswordPage = () => {
         return;
       }
 
-      setSubmitError(
+      toast.error(
         getApiErrorMessage(apiError, "We could not send the OTP. Please try again."),
+        { id: "forget-password-error" },
       );
     }
   };
@@ -76,19 +75,9 @@ const ForgetPasswordPage = () => {
         </div>
 
         <form onSubmit={handleSubmit} noValidate>
-          {submitError ? (
-            <Alert variant="destructive" className="mb-4 grid gap-1 rounded-xl">
-              <AlertTitle>Unable to send OTP</AlertTitle>
-              <AlertDescription>{submitError}</AlertDescription>
-            </Alert>
-          ) : null}
-
-          <Alert className="mb-4 grid gap-1 rounded-xl">
-            <AlertTitle>Check your inbox carefully</AlertTitle>
-            <AlertDescription>
-              We will send your one-time password to the email address you enter below.
-            </AlertDescription>
-          </Alert>
+          <p className="mb-4 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">
+            We will send your one-time password to the email address you enter below.
+          </p>
 
           <InputField
             label="Email"

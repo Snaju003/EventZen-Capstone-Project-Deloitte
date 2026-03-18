@@ -43,6 +43,12 @@ export const updateMeSchema = z
   .object({
     name: z.string().trim().min(2, "Full name must be at least 2 characters long.").optional(),
     email: emailSchema.optional(),
+    currentPassword: z.string().min(1, "Current password is required.").optional(),
+    newPassword: passwordSchema.optional(),
+  })
+  .refine((data) => !data.newPassword || !!data.currentPassword, {
+    message: "Current password is required to set a new password.",
+    path: ["currentPassword"],
   })
   .refine((data) => Object.keys(data).length > 0, {
     message: "Provide at least one field to update.",

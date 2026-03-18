@@ -2,8 +2,8 @@ import { useState } from "react";
 import { BadgePlus } from "lucide-react";
 import { z } from "zod";
 import { useNavigate } from "react-router-dom";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+import toast from "react-hot-toast";
 import { InputField } from "@/components/ui/InputField";
 import { MailIcon, LockIcon, UserIcon } from "@/components/ui/Icons";
 import { useAuth } from "@/hooks/useAuth";
@@ -20,7 +20,6 @@ export const RegisterForm = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [errors, setErrors] = useState({});
-  const [submitError, setSubmitError] = useState("");
 
   const passwordMismatch =
     confirmPassword.length > 0 && password !== confirmPassword;
@@ -40,7 +39,6 @@ export const RegisterForm = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setErrors({});
-    setSubmitError("");
 
     const values = { name, email, password, confirmPassword };
     const parsedValues = registerSchema.safeParse(values);
@@ -65,21 +63,15 @@ export const RegisterForm = () => {
         return;
       }
 
-      setSubmitError(
+      toast.error(
         getApiErrorMessage(error, "Registration failed. Please try again."),
+        { id: "register-error" },
       );
     }
   };
 
   return (
     <form onSubmit={handleSubmit} noValidate>
-      {submitError ? (
-        <Alert variant="destructive" className="mb-4 grid gap-1 rounded-xl">
-          <AlertTitle>Registration failed</AlertTitle>
-          <AlertDescription>{submitError}</AlertDescription>
-        </Alert>
-      ) : null}
-
       <InputField
         label="Full name"
         type="text"

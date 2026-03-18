@@ -1,4 +1,4 @@
-import { createContext, useEffect, useRef, useState } from "react";
+import { createContext, useCallback, useEffect, useState } from "react";
 
 import {
   loginSchema,
@@ -8,16 +8,20 @@ import {
   verifyOtpSchema,
 } from "@/lib/auth-schemas";
 import {
+  approveVendorRoleRequest,
   authApi,
+  ensureCsrfToken,
   extractPayload,
-  extractTokens,
   extractUser,
   getMessage,
+  getPendingVendorRoleRequests,
+  requestVendorRole,
 } from "@/lib/auth-api";
 
-const ACCESS_TOKEN_KEY = "auth.accessToken";
-const REFRESH_TOKEN_KEY = "auth.refreshToken";
 const PENDING_VERIFICATION_KEY = "auth.pendingVerification";
+const RESET_TOKEN_KEY = "auth.resetToken";
+const LEGACY_ACCESS_TOKEN_KEY = "auth.accessToken";
+const LEGACY_REFRESH_TOKEN_KEY = "auth.refreshToken";
 
 const defaultPendingVerification = {
   email: "",
@@ -56,29 +60,14 @@ function readPendingVerification() {
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
-  const [accessToken, setAccessToken] = useState(() => readStorage(ACCESS_TOKEN_KEY));
-  const [storedRefreshToken, setStoredRefreshToken] = useState(() =>
-    readStorage(REFRESH_TOKEN_KEY),
-  );
   const [pendingVerification, setPendingVerificationState] = useState(() =>
     readPendingVerification(),
   );
   const [isInitializing, setIsInitializing] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
-  const initialTokensRef = useRef({
-    accessToken: readStorage(ACCESS_TOKEN_KEY),
-    refreshToken: readStorage(REFRESH_TOKEN_KEY),
-  });
-
-  const setTokens = ({ accessToken: nextAccessToken, refreshToken: nextRefreshToken }) => {
-    const safeAccessToken = nextAccessToken || null;
-    const safeRefreshToken = nextRefreshToken || null;
-
-    setAccessToken(safeAccessToken);
-    setStoredRefreshToken(safeRefreshToken);
-    writeStorage(ACCESS_TOKEN_KEY, safeAccessToken);
-    writeStorage(REFRESH_TOKEN_KEY, safeRefreshToken);
-  };
+  const [pendingResetToken, setPendingResetToken] = useState(() =>
+    readStorage(RESET_TOKEN_KEY),
+  );
 
   const setPendingVerification = (value) => {
     const nextValue = value?.email ? value : defaultPendingVerification;
@@ -92,29 +81,16 @@ export function AuthProvider({ children }) {
 
   const clearAuthState = () => {
     setUser(null);
-    setTokens({ accessToken: null, refreshToken: null });
   };
 
-  const getAuthorizedConfig = (tokenOverride) => {
-    const token = tokenOverride || accessToken;
-
-    if (!token) return {};
-
-    return {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    };
-  };
-
-  const fetchMe = async (tokenOverride) => {
-    const response = await authApi.get("/me", getAuthorizedConfig(tokenOverride));
+  const fetchMe = useCallback(async () => {
+    const response = await authApi.get("/me");
     const payload = extractPayload(response);
     const nextUser = extractUser(payload) || payload;
 
     setUser(nextUser);
     return nextUser;
-  };
+  }, []);
 
   const withLoading = async (task) => {
     setIsLoading(true);
@@ -126,41 +102,22 @@ export function AuthProvider({ children }) {
     }
   };
 
-  const refreshAuthToken = async () => {
-    const response = await authApi.post(
-      "/refresh-token",
-      storedRefreshToken ? { refreshToken: storedRefreshToken } : {},
-    );
+  const refreshAuthToken = useCallback(async () => {
+    const response = await authApi.post("/refresh-token", {});
     const payload = extractPayload(response);
-    const tokens = extractTokens(payload);
+    const nextUser = extractUser(payload) || (await fetchMe());
 
-    if (!tokens.accessToken && !tokens.refreshToken) {
-      throw new Error("Refresh token response did not include new tokens.");
-    }
-
-    setTokens({
-      accessToken: tokens.accessToken || accessToken,
-      refreshToken: tokens.refreshToken || storedRefreshToken,
-    });
-
-    const nextUser = extractUser(payload);
-    if (nextUser) {
-      setUser(nextUser);
-    }
-
+    setUser(nextUser);
     return payload;
-  };
+  }, [fetchMe]);
 
   const login = async (values) =>
     withLoading(async () => {
       const parsedValues = loginSchema.parse(values);
       const response = await authApi.post("/login", parsedValues);
       const payload = extractPayload(response);
-      const tokens = extractTokens(payload);
 
-      setTokens(tokens);
-
-      const nextUser = extractUser(payload) || (await fetchMe(tokens.accessToken));
+      const nextUser = extractUser(payload) || (await fetchMe());
       setUser(nextUser);
 
       return {
@@ -192,7 +149,7 @@ export function AuthProvider({ children }) {
   const requestPasswordOtp = async (email) =>
     withLoading(async () => {
       const parsedValues = requestOtpSchema.parse({ email });
-      const response = await authApi.post("/resend-otp", parsedValues);
+      const response = await authApi.post("/forgot-password", parsedValues);
 
       setPendingVerification({
         email: parsedValues.email,
@@ -231,13 +188,17 @@ export function AuthProvider({ children }) {
       });
       const response = await authApi.post("/verify-otp", parsedValues);
       const payload = extractPayload(response);
-      const tokens = extractTokens(payload);
 
-      if (tokens.accessToken || tokens.refreshToken) {
-        setTokens(tokens);
+      let nextUser = extractUser(payload);
+
+      if (!nextUser) {
+        try {
+          nextUser = await fetchMe();
+        } catch {
+          nextUser = null;
+        }
       }
 
-      const nextUser = extractUser(payload);
       if (nextUser) {
         setUser(nextUser);
       }
@@ -247,13 +208,54 @@ export function AuthProvider({ children }) {
       return {
         payload,
         message: getMessage(response),
+        user: nextUser || null,
+        isLoggedIn: Boolean(nextUser),
+      };
+    });
+
+  const verifyResetOtp = async ({ email, otp }) =>
+    withLoading(async () => {
+      const parsedValues = verifyOtpSchema.parse({
+        email: email || pendingVerification.email,
+        otp,
+      });
+      const response = await authApi.post("/verify-reset-otp", parsedValues);
+      const payload = extractPayload(response);
+
+      const resetToken = payload?.resetToken || response?.data?.resetToken || null;
+
+      setPendingResetToken(resetToken);
+      writeStorage(RESET_TOKEN_KEY, resetToken);
+      setPendingVerification(defaultPendingVerification);
+
+      return {
+        payload,
+        resetToken,
+        message: getMessage(response),
+      };
+    });
+
+  const resetPassword = async (newPassword, resetToken) =>
+    withLoading(async () => {
+      const response = await authApi.post(
+        "/reset-password",
+        { newPassword },
+        { headers: { Authorization: `Bearer ${resetToken}` } },
+      );
+
+      setPendingResetToken(null);
+      writeStorage(RESET_TOKEN_KEY, null);
+
+      return {
+        payload: extractPayload(response),
+        message: getMessage(response),
       };
     });
 
   const updateMe = async (values) =>
     withLoading(async () => {
       const parsedValues = updateMeSchema.parse(values);
-      const response = await authApi.put("/me", parsedValues, getAuthorizedConfig());
+      const response = await authApi.put("/me", parsedValues);
       const payload = extractPayload(response);
       const nextUser = extractUser(payload) || payload;
 
@@ -264,9 +266,23 @@ export function AuthProvider({ children }) {
       };
     });
 
+  const uploadAvatar = async (file) =>
+    withLoading(async () => {
+      const formData = new FormData();
+      formData.append("avatar", file);
+
+      const response = await authApi.post("/avatar", formData);
+      const nextUser = await fetchMe();
+
+      return {
+        user: nextUser,
+        message: getMessage(response),
+      };
+    });
+
   const deleteMe = async () =>
     withLoading(async () => {
-      const response = await authApi.delete("/me", getAuthorizedConfig());
+      const response = await authApi.delete("/me");
       clearAuthState();
       return {
         payload: extractPayload(response),
@@ -274,73 +290,65 @@ export function AuthProvider({ children }) {
       };
     });
 
+  const requestVendorAccess = async () =>
+    withLoading(async () => {
+      const payload = await requestVendorRole();
+      const nextUser = payload?.user || (await fetchMe());
+      setUser(nextUser);
+
+      return {
+        payload,
+        user: nextUser,
+        message: payload?.message || "Vendor role request submitted.",
+      };
+    });
+
+  const loadPendingVendorRequests = async () =>
+    withLoading(async () => {
+      const requests = await getPendingVendorRoleRequests();
+      return requests;
+    });
+
+  const approveVendorRequest = async (userId) =>
+    withLoading(async () => {
+      const payload = await approveVendorRoleRequest(userId);
+      return {
+        payload,
+        message: payload?.message || "Vendor role approved.",
+      };
+    });
+
   const logout = async () =>
     withLoading(async () => {
       try {
-        await authApi.post(
-          "/logout",
-          storedRefreshToken ? { refreshToken: storedRefreshToken } : {},
-          getAuthorizedConfig(),
-        );
+        await authApi.post("/logout", {});
       } finally {
         clearAuthState();
       }
     });
 
   useEffect(() => {
+    writeStorage(LEGACY_ACCESS_TOKEN_KEY, null);
+    writeStorage(LEGACY_REFRESH_TOKEN_KEY, null);
+
     let active = true;
 
     const bootstrap = async () => {
       try {
-        const initialAccessToken = initialTokensRef.current.accessToken;
-        const initialRefreshToken = initialTokensRef.current.refreshToken;
-
-        if (initialAccessToken) {
-          const meResponse = await authApi.get("/me", {
-            headers: {
-              Authorization: `Bearer ${initialAccessToken}`,
-            },
-          });
-          const mePayload = extractPayload(meResponse);
-
-          if (active) {
-            setUser(extractUser(mePayload) || mePayload);
-          }
-        } else if (initialRefreshToken) {
-          const refreshResponse = await authApi.post("/refresh-token", {
-            refreshToken: initialRefreshToken,
-          });
-          const refreshPayload = extractPayload(refreshResponse);
-          const tokens = extractTokens(refreshPayload);
-
-          if (active) {
-            setTokens({
-              accessToken: tokens.accessToken || initialAccessToken,
-              refreshToken: tokens.refreshToken || initialRefreshToken,
-            });
-          }
-
-          if (extractUser(refreshPayload)) {
-            if (active) {
-              setUser(extractUser(refreshPayload));
-            }
-          } else if (tokens.accessToken) {
-            const meResponse = await authApi.get("/me", {
-              headers: {
-                Authorization: `Bearer ${tokens.accessToken}`,
-              },
-            });
-            const mePayload = extractPayload(meResponse);
-
-            if (active) {
-              setUser(extractUser(mePayload) || mePayload);
-            }
-          }
-        }
+        await ensureCsrfToken();
       } catch {
-        if (active) {
-          setUser(null);
-          setTokens({ accessToken: null, refreshToken: null });
+        // Continue bootstrap; CSRF cookie can also be issued on login/refresh.
+      }
+
+      try {
+        await fetchMe();
+      } catch {
+        try {
+          await refreshAuthToken();
+        } catch {
+          if (active) {
+            setUser(null);
+          }
         }
       } finally {
         if (active) {
@@ -354,28 +362,33 @@ export function AuthProvider({ children }) {
     return () => {
       active = false;
     };
-  }, []);
+  }, [fetchMe, refreshAuthToken]);
 
   return (
     <AuthContext.Provider
       value={{
         user,
-        accessToken,
-        refreshToken: storedRefreshToken,
         pendingVerification,
-        isAuthenticated: Boolean(user && accessToken),
+        isAuthenticated: Boolean(user),
         isInitializing,
         isLoading,
         login,
         register,
         verifyOtp,
+        verifyResetOtp,
         resendOtp,
         requestPasswordOtp,
+        resetPassword,
+        pendingResetToken,
         refreshSession: refreshAuthToken,
         logout,
         fetchMe,
         updateMe,
+        uploadAvatar,
         deleteMe,
+        requestVendorAccess,
+        loadPendingVendorRequests,
+        approveVendorRequest,
         setPendingVerification,
       }}
     >

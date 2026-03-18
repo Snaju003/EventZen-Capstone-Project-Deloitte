@@ -1,21 +1,25 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { KeyRound } from "lucide-react";
-import { Link, useLocation } from "react-router-dom";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
+import toast from "react-hot-toast";
+import { useAuth } from "@/hooks/useAuth";
 import { InputField } from "@/components/ui/InputField";
 import { LogoIcon, LockIcon } from "@/components/ui/Icons";
+import { getApiErrorMessage } from "@/lib/auth-api";
 import { getFieldErrors, resetPasswordSchema } from "@/lib/auth-schemas";
 
 const ResetPasswordPage = () => {
   const location = useLocation();
+  const navigate = useNavigate();
+  const { isLoading, resetPassword, pendingResetToken } = useAuth();
+  const resetToken = pendingResetToken || location.state?.resetToken;
+  const statusMessage = location.state?.statusMessage;
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [errors, setErrors] = useState({});
-  const [submitError, setSubmitError] = useState("");
-  const [statusMessage] = useState(location.state?.statusMessage || "");
 
   const passwordMismatch =
     confirmPassword.length > 0 && password !== confirmPassword;
@@ -32,7 +36,13 @@ const ResetPasswordPage = () => {
     },
   ];
 
-  const handleSubmit = (e) => {
+  useEffect(() => {
+    if (statusMessage) {
+      toast.success(statusMessage, { id: "reset-status" });
+    }
+  }, [statusMessage]);
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setErrors({});
 
@@ -46,9 +56,20 @@ const ResetPasswordPage = () => {
       return;
     }
 
-    setSubmitError(
-      "No password reset endpoint was provided in the available auth API, so this form is currently limited to client-side validation.",
-    );
+    if (!resetToken) {
+      toast.error("Missing reset token. Please restart the password reset flow.", { id: "reset-error" });
+      return;
+    }
+
+    try {
+      await resetPassword(parsedValues.data.password, resetToken);
+      navigate("/success-message");
+    } catch (apiError) {
+      toast.error(
+        getApiErrorMessage(apiError, "Password reset failed. Please try again."),
+        { id: "reset-error" },
+      );
+    }
   };
 
   return (
@@ -77,40 +98,11 @@ const ResetPasswordPage = () => {
 
         {/* Form */}
         <form onSubmit={handleSubmit} noValidate>
-          {statusMessage ? (
-            <Alert className="mb-4 grid gap-1 rounded-xl border-emerald-200 bg-emerald-50 text-emerald-800">
-              <AlertTitle>OTP verified</AlertTitle>
-              <AlertDescription className="text-emerald-700">
-                {statusMessage}
-              </AlertDescription>
-            </Alert>
-          ) : null}
-
-          {submitError ? (
-            <Alert variant="destructive" className="mb-4 grid gap-1 rounded-xl">
-              <AlertTitle>Reset API not available</AlertTitle>
-              <AlertDescription>{submitError}</AlertDescription>
-            </Alert>
-          ) : null}
-
-          {passwordMismatch ? (
-            <Alert
-              variant="destructive"
-              className="mb-4 grid gap-1 rounded-xl"
-            >
-              <AlertTitle>Passwords do not match</AlertTitle>
-              <AlertDescription>
-                Please make sure both password fields are identical before continuing.
-              </AlertDescription>
-            </Alert>
-          ) : (
-            <Alert className="mb-4 grid gap-1 rounded-xl">
-              <AlertTitle>Create a strong password</AlertTitle>
-              <AlertDescription>
-                Use the checklist below to choose a password that is harder to guess.
-              </AlertDescription>
-            </Alert>
-          )}
+          <p className="mb-4 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">
+            {passwordMismatch
+              ? "Please make sure both password fields are identical before continuing."
+              : "Use the checklist below to choose a password that is harder to guess."}
+          </p>
 
           <InputField
             label="New password"
@@ -144,11 +136,11 @@ const ResetPasswordPage = () => {
 
           <Button
             type="submit"
-            disabled={passwordMismatch || passwordRequirements.some((r) => !r.isMet) || !password}
+            disabled={passwordMismatch || passwordRequirements.some((r) => !r.isMet) || !password || isLoading}
             className="mt-4 w-full"
           >
             <KeyRound className="size-4" />
-            Reset password
+            {isLoading ? "Resetting password..." : "Reset password"}
           </Button>
         </form>
 

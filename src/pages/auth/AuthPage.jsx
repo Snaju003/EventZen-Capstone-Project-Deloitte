@@ -1,23 +1,43 @@
 import { useEffect, useState } from "react";
 import { LogIn, UserPlus } from "lucide-react";
-import { useLocation } from "react-router-dom";
+import { Navigate, useLocation, useNavigate } from "react-router-dom";
 import { LoginForm } from "@/components/auth/LoginForm";
 import { RegisterForm } from "@/components/auth/RegisterForm";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { LogoIcon } from "@/components/ui/Icons";
 import { useAuth } from "@/hooks/useAuth";
+import toast from "react-hot-toast";
 
 const AuthPage = () => {
   const location = useLocation();
-  const { isAuthenticated, logout, user } = useAuth();
+  const navigate = useNavigate();
+  const { isAuthenticated, user } = useAuth();
   const [tab, setTab] = useState(location.state?.activeTab || "login");
 
   useEffect(() => {
-    if (location.state?.activeTab) {
-      setTab(location.state.activeTab);
+    const activeTab = location.state?.activeTab;
+    const statusMessage = location.state?.statusMessage;
+
+    if (activeTab) {
+      setTab(activeTab);
     }
-  }, [location.state]);
+
+    if (!statusMessage) return;
+
+    toast.success(statusMessage, { id: "auth-status" });
+
+    // Consume one-time navigation message so it does not replay on refresh.
+    navigate(location.pathname, {
+      replace: true,
+      state: activeTab ? { activeTab } : null,
+    });
+  }, [location.pathname, location.state, navigate]);
+
+  if (isAuthenticated) {
+    const normalizedRole = user?.role?.toLowerCase();
+    const redirectPath = normalizedRole === "admin" || normalizedRole === "vendor" ? "/admin/dashboard" : "/profile";
+    return <Navigate to={redirectPath} replace />;
+  }
 
   return (
     <div className="min-h-screen w-full flex items-center justify-center px-4 py-10 bg-slate-50">
@@ -36,29 +56,6 @@ const AuthPage = () => {
           </span>
         </div>
 
-        {location.state?.statusMessage ? (
-          <Alert className="mb-6 grid gap-1 rounded-xl border-emerald-200 bg-emerald-50 text-emerald-800">
-            <AlertTitle>Auth update</AlertTitle>
-            <AlertDescription className="text-emerald-700">
-              {location.state.statusMessage}
-            </AlertDescription>
-          </Alert>
-        ) : null}
-
-        {isAuthenticated ? (
-          <Alert className="mb-6 grid gap-2 rounded-xl border-emerald-200 bg-emerald-50 text-emerald-800">
-            <AlertTitle>You are signed in</AlertTitle>
-            <AlertDescription className="text-emerald-700">
-              {user?.email || "Your session is active."}
-            </AlertDescription>
-            <div>
-              <Button type="button" variant="outline" size="sm" onClick={logout}>
-                Sign out
-              </Button>
-            </div>
-          </Alert>
-        ) : null}
-
         {/* Tab toggle */}
         <div className="flex bg-slate-100 rounded-[10px] p-0.75 gap-0.75 mb-7">
           {["login", "register"].map((t) => (
@@ -68,11 +65,10 @@ const AuthPage = () => {
               onClick={() => setTab(t)}
               variant={tab === t ? "outline" : "ghost"}
               size="sm"
-              className={`flex-1 ${
-                tab === t
-                  ? "border-white bg-white text-[#2e4057] shadow-sm hover:bg-white"
-                  : "text-slate-500 hover:text-slate-700"
-              }`}
+              className={`flex-1 ${tab === t
+                ? "border-white bg-white text-[#2e4057] shadow-sm hover:bg-white"
+                : "text-slate-500 hover:text-slate-700"
+                }`}
             >
               {t === "login" ? <LogIn className="size-4" /> : <UserPlus className="size-4" />}
               {t === "login" ? "Log in" : "Register"}
