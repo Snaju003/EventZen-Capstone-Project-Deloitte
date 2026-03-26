@@ -1,19 +1,27 @@
 package com.eventzen.budget.model;
 
+import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.mapping.Document;
+
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 
-public class Budget {
+@Document("event_budgets")
+public class EventBudget {
+
+    @Id
+    private String eventId;
 
     private BigDecimal totalBudget;
     private BigDecimal spent;
     private List<Expense> expenses = new ArrayList<>();
 
-    public Budget() {
+    public EventBudget() {
     }
 
-    public Budget(BigDecimal totalBudget, BigDecimal spent, List<Expense> expenses) {
+    public EventBudget(String eventId, BigDecimal totalBudget, BigDecimal spent, List<Expense> expenses) {
+        this.eventId = eventId;
         this.totalBudget = totalBudget;
         this.spent = spent;
         this.expenses = expenses != null ? expenses : new ArrayList<>();
@@ -21,6 +29,14 @@ public class Budget {
 
     public static Builder builder() {
         return new Builder();
+    }
+
+    public String getEventId() {
+        return eventId;
+    }
+
+    public void setEventId(String eventId) {
+        this.eventId = eventId;
     }
 
     public BigDecimal getTotalBudget() {
@@ -48,9 +64,15 @@ public class Budget {
     }
 
     public static final class Builder {
+        private String eventId;
         private BigDecimal totalBudget;
         private BigDecimal spent;
         private List<Expense> expenses = new ArrayList<>();
+
+        public Builder eventId(String eventId) {
+            this.eventId = eventId;
+            return this;
+        }
 
         public Builder totalBudget(BigDecimal totalBudget) {
             this.totalBudget = totalBudget;
@@ -67,8 +89,8 @@ public class Budget {
             return this;
         }
 
-        public Budget build() {
-            return new Budget(totalBudget, spent, expenses);
+        public EventBudget build() {
+            return new EventBudget(eventId, totalBudget, spent, expenses);
         }
     }
 }

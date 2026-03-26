@@ -2,16 +2,14 @@ package com.eventzen.budget.service;
 
 import com.eventzen.budget.dto.BudgetSummaryResponse;
 import com.eventzen.budget.dto.CreateExpenseRequest;
+import com.eventzen.budget.dto.ExpensesResponse;
 import com.eventzen.budget.dto.UpdateBudgetRequest;
+import com.eventzen.budget.exception.AccessDeniedException;
 import com.eventzen.budget.exception.ResourceNotFoundException;
-import com.eventzen.budget.model.Budget;
-import com.eventzen.budget.model.Event;
+import com.eventzen.budget.model.EventAccessSnapshot;
+import com.eventzen.budget.model.EventBudget;
 import com.eventzen.budget.model.Expense;
-import com.eventzen.budget.repository.EventRepository;
-import org.springframework.data.mongodb.core.MongoTemplate;
-import org.springframework.data.mongodb.core.query.Criteria;
-import org.springframework.data.mongodb.core.query.Query;
-import org.springframework.data.mongodb.core.query.Update;
+import com.eventzen.budget.repository.EventBudgetRepository;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
@@ -23,26 +21,40 @@ import java.util.stream.Collectors;
 @Service
 public class BudgetService {
 
-    private final EventRepository eventRepository;
-    private final MongoTemplate mongoTemplate;
+    private static final String ROLE_ADMIN = "admin";
+    private static final String ROLE_VENDOR = "vendor";
 
-    public BudgetService(EventRepository eventRepository, MongoTemplate mongoTemplate) {
-        this.eventRepository = eventRepository;
-        this.mongoTemplate = mongoTemplate;
+    private final EventBudgetRepository eventBudgetRepository;
+    private final EventAccessClient eventAccessClient;
+
+    public BudgetService(EventBudgetRepository eventBudgetRepository, EventAccessClient eventAccessClient) {
+        this.eventBudgetRepository = eventBudgetRepository;
+        this.eventAccessClient = eventAccessClient;
     }
 
-    // SET or UPDATE budget
-    public void setBudget(String eventId, UpdateBudgetRequest request) {
-        ensureEventExists(eventId);
+    public void setBudget(String eventId, UpdateBudgetRequest request, String requesterId, String requesterRole) {
+        getAuthorizedEventOrThrow(eventId, requesterId, requesterRole);
 
-        Query query = Query.query(Criteria.where("_id").is(eventId));
-        Update update = new Update().set("budget.totalBudget", request.getTotalBudget());
-        mongoTemplate.updateFirst(query, update, Event.class);
+        EventBudget budget = eventBudgetRepository.findById(eventId)
+                .orElseGet(() -> EventBudget.builder()
+                        .eventId(eventId)
+                        .spent(BigDecimal.ZERO)
+                        .expenses(new ArrayList<>())
+                        .build());
+
+        budget.setTotalBudget(request.getTotalBudget());
+        if (budget.getSpent() == null) {
+            budget.setSpent(BigDecimal.ZERO);
+        }
+        if (budget.getExpenses() == null) {
+            budget.setExpenses(new ArrayList<>());
+        }
+
+        eventBudgetRepository.save(budget);
     }
 
-    // ADD expense
-    public Expense addExpense(String eventId, CreateExpenseRequest request) {
-        ensureEventExists(eventId);
+    public Expense addExpense(String eventId, CreateExpenseRequest request, String requesterId, String requesterRole) {
+        EventBudget budget = getAuthorizedBudgetOrThrow(eventId, requesterId, requesterRole);
 
         Expense expense = Expense.create(
                 request.getDescription(),
@@ -51,21 +63,21 @@ public class BudgetService {
                 request.getCategory()
         );
 
-        Query query = Query.query(Criteria.where("_id").is(eventId));
-        Update update = new Update()
-                .push("budget.expenses", expense)
-                .set("budget.spent", recalculateSpent(eventId, expense.getAmount()));
+        List<Expense> expenses = toMutableExpenses(budget.getExpenses());
+        expenses.add(expense);
 
-        mongoTemplate.updateFirst(query, update, Event.class);
+        budget.setExpenses(expenses);
+        budget.setSpent(calculateSpent(expenses));
+
+        eventBudgetRepository.save(budget);
         return expense;
     }
 
-    // DELETE expense
-    public void deleteExpense(String eventId, String expenseId) {
-        Event event = getEventOrThrow(eventId);
-        Budget budget = getBudgetOrThrow(event, eventId);
+    public void deleteExpense(String eventId, String expenseId, String requesterId, String requesterRole) {
+        EventBudget budget = getAuthorizedBudgetOrThrow(eventId, requesterId, requesterRole);
+        List<Expense> expenses = toMutableExpenses(budget.getExpenses());
 
-        Expense expenseToDelete = budget.getExpenses().stream()
+        Expense expenseToDelete = expenses.stream()
                 .filter(expense -> expense.getId().equals(expenseId))
                 .findFirst()
                 .orElse(null);
@@ -73,20 +85,14 @@ public class BudgetService {
             throw new ResourceNotFoundException("Expense not found: " + expenseId);
         }
 
-        BigDecimal currentSpent = budget.getSpent() != null ? budget.getSpent() : BigDecimal.ZERO;
-        BigDecimal newSpent = currentSpent.subtract(expenseToDelete.getAmount());
-
-        Query query = Query.query(Criteria.where("_id").is(eventId));
-        Update update = new Update()
-                .pull("budget.expenses", Query.query(Criteria.where("id").is(expenseId)))
-                .set("budget.spent", newSpent);
-        mongoTemplate.updateFirst(query, update, Event.class);
+        expenses.removeIf(expense -> expense.getId().equals(expenseId));
+        budget.setExpenses(expenses);
+        budget.setSpent(calculateSpent(expenses));
+        eventBudgetRepository.save(budget);
     }
 
-    // GET budget summary
-    public BudgetSummaryResponse getBudgetSummary(String eventId) {
-        Event event = getEventOrThrow(eventId);
-        Budget budget = getBudgetOrThrow(event, eventId);
+    public BudgetSummaryResponse getBudgetSummary(String eventId, String requesterId, String requesterRole) {
+        EventBudget budget = getAuthorizedBudgetOrThrow(eventId, requesterId, requesterRole);
 
         BigDecimal total = budget.getTotalBudget() != null ? budget.getTotalBudget() : BigDecimal.ZERO;
         BigDecimal spent = budget.getSpent() != null ? budget.getSpent() : BigDecimal.ZERO;
@@ -100,50 +106,101 @@ public class BudgetService {
                 .build();
     }
 
-    // GET expenses grouped by category
-    public Map<String, BigDecimal> getExpensesGroupedByCategory(String eventId) {
-        Event event = getEventOrThrow(eventId);
-        Budget budget = getBudgetOrThrow(event, eventId);
+    public Map<String, BigDecimal> getExpensesGroupedByCategory(String eventId, String requesterId, String requesterRole) {
+        EventBudget budget = getAuthorizedBudgetOrThrow(eventId, requesterId, requesterRole);
+        return groupExpensesByCategory(budget.getExpenses());
+    }
 
-        return budget.getExpenses().stream()
+    public List<Expense> getExpenses(String eventId, String requesterId, String requesterRole) {
+        EventBudget budget = getAuthorizedBudgetOrThrow(eventId, requesterId, requesterRole);
+        return toExpenseList(budget.getExpenses());
+    }
+
+    public ExpensesResponse getExpensesResponse(String eventId, String requesterId, String requesterRole) {
+        EventBudget budget = getAuthorizedBudgetOrThrow(eventId, requesterId, requesterRole);
+        List<Expense> expenses = toExpenseList(budget.getExpenses());
+        Map<String, BigDecimal> groupedByCategory = groupExpensesByCategory(expenses);
+        return new ExpensesResponse(expenses, groupedByCategory);
+    }
+
+    private EventBudget getAuthorizedBudgetOrThrow(String eventId, String requesterId, String requesterRole) {
+        getAuthorizedEventOrThrow(eventId, requesterId, requesterRole);
+        return getBudgetOrThrow(eventId);
+    }
+
+    private EventAccessSnapshot getEventOrThrow(String eventId) {
+        return eventAccessClient.getEventAccessSnapshot(eventId)
+                .orElseThrow(() -> new ResourceNotFoundException("Event not found: " + eventId));
+    }
+
+    private EventAccessSnapshot getAuthorizedEventOrThrow(String eventId, String requesterId, String requesterRole) {
+        EventAccessSnapshot event = getEventOrThrow(eventId);
+        assertCanAccessEvent(event, requesterId, requesterRole);
+        return event;
+    }
+
+    private void assertCanAccessEvent(EventAccessSnapshot event, String requesterId, String requesterRole) {
+        if (requesterRole == null || requesterRole.isBlank()) {
+            throw new AccessDeniedException("Admin or vendor role required");
+        }
+
+        if (ROLE_ADMIN.equalsIgnoreCase(requesterRole)) {
+            return;
+        }
+
+        if (!ROLE_VENDOR.equalsIgnoreCase(requesterRole)) {
+            throw new AccessDeniedException("Admin or vendor role required");
+        }
+
+        if (requesterId == null || requesterId.isBlank()) {
+            throw new AccessDeniedException("Vendor identity is required");
+        }
+
+        boolean isOwner = requesterId.equals(event.getCreatedBy());
+        boolean isApprovedVendor = requesterId.equals(event.getApprovedVendorUserId());
+        if (!isOwner && !isApprovedVendor) {
+            throw new AccessDeniedException("You can only access budgets for your own or approved events");
+        }
+    }
+
+    private EventBudget getBudgetOrThrow(String eventId) {
+        EventBudget budget = eventBudgetRepository.findById(eventId)
+                .orElse(null);
+
+        if (budget == null) {
+            throw new ResourceNotFoundException("Budget not initialized for event: " + eventId);
+        }
+
+        return budget;
+    }
+
+    private List<Expense> toMutableExpenses(List<Expense> expenses) {
+        return expenses != null ? new ArrayList<>(expenses) : new ArrayList<>();
+    }
+
+    private List<Expense> toExpenseList(List<Expense> expenses) {
+        return expenses != null ? expenses : new ArrayList<>();
+    }
+
+    private Map<String, BigDecimal> groupExpensesByCategory(List<Expense> expenses) {
+        if (expenses == null) {
+            return Map.of();
+        }
+
+        return expenses.stream()
                 .collect(Collectors.groupingBy(
                         Expense::getCategory,
                         Collectors.reducing(BigDecimal.ZERO, Expense::getAmount, BigDecimal::add)
                 ));
     }
 
-    // GET all expenses
-    public List<Expense> getExpenses(String eventId) {
-        Event event = getEventOrThrow(eventId);
-        Budget budget = getBudgetOrThrow(event, eventId);
-        return budget.getExpenses() != null ? budget.getExpenses() : new ArrayList<>();
-    }
-
-    // --- Helpers ---
-
-    private BigDecimal recalculateSpent(String eventId, BigDecimal newAmount) {
-        Event event = getEventOrThrow(eventId);
-        Budget budget = event.getBudget();
-        BigDecimal current = (budget != null && budget.getSpent() != null)
-                ? budget.getSpent() : BigDecimal.ZERO;
-        return current.add(newAmount);
-    }
-
-    private void ensureEventExists(String eventId) {
-        if (eventRepository.findById(eventId).isEmpty()) {
-            throw new ResourceNotFoundException("Event not found: " + eventId);
+    private BigDecimal calculateSpent(List<Expense> expenses) {
+        if (expenses == null || expenses.isEmpty()) {
+            return BigDecimal.ZERO;
         }
-    }
 
-    private Event getEventOrThrow(String eventId) {
-        return eventRepository.findById(eventId)
-                .orElseThrow(() -> new ResourceNotFoundException("Event not found: " + eventId));
-    }
-
-    private Budget getBudgetOrThrow(Event event, String eventId) {
-        if (event.getBudget() == null) {
-            throw new ResourceNotFoundException("Budget not initialized for event: " + eventId);
-        }
-        return event.getBudget();
+        return expenses.stream()
+                .map(expense -> expense.getAmount() != null ? expense.getAmount() : BigDecimal.ZERO)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 }

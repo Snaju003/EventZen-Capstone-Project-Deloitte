@@ -3,20 +3,18 @@ package com.eventzen.budget;
 import com.eventzen.budget.dto.BudgetSummaryResponse;
 import com.eventzen.budget.dto.CreateExpenseRequest;
 import com.eventzen.budget.exception.ResourceNotFoundException;
-import com.eventzen.budget.model.Budget;
-import com.eventzen.budget.model.Event;
+import com.eventzen.budget.model.EventAccessSnapshot;
+import com.eventzen.budget.model.EventBudget;
 import com.eventzen.budget.model.Expense;
-import com.eventzen.budget.repository.EventRepository;
+import com.eventzen.budget.repository.EventBudgetRepository;
 import com.eventzen.budget.service.BudgetService;
+import com.eventzen.budget.service.EventAccessClient;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.data.mongodb.core.MongoTemplate;
-import org.springframework.data.mongodb.core.query.Query;
-import org.springframework.data.mongodb.core.query.Update;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -32,15 +30,16 @@ import static org.mockito.Mockito.*;
 class BudgetServiceTest {
 
     @Mock
-    private EventRepository eventRepository;
+    private EventBudgetRepository eventBudgetRepository;
 
     @Mock
-    private MongoTemplate mongoTemplate;
+    private EventAccessClient eventAccessClient;
 
     @InjectMocks
     private BudgetService budgetService;
 
-    private Event sampleEvent;
+    private EventAccessSnapshot sampleEvent;
+    private EventBudget sampleBudget;
 
     @BeforeEach
     void setUp() {
@@ -60,23 +59,26 @@ class BudgetServiceTest {
                 .expenseDate(LocalDate.now())
                 .build();
 
-        Budget budget = Budget.builder()
+        sampleBudget = EventBudget.builder()
+                .eventId("event-123")
                 .totalBudget(new BigDecimal("50000"))
                 .spent(new BigDecimal("35000"))
                 .expenses(new ArrayList<>(Arrays.asList(expense1, expense2)))
                 .build();
 
-        sampleEvent = Event.builder()
-                .id("event-123")
-                .budget(budget)
-                .build();
+        sampleEvent = new EventAccessSnapshot();
+        sampleEvent.setContractVersion("v1");
+        sampleEvent.setEventId("event-123");
+        sampleEvent.setCreatedBy("vendor-owner");
+        sampleEvent.setApprovedVendorUserId("approved-vendor");
     }
 
     @Test
     void getBudgetSummary_returnsCorrectValues() {
-        when(eventRepository.findById("event-123")).thenReturn(Optional.of(sampleEvent));
+        when(eventAccessClient.getEventAccessSnapshot("event-123")).thenReturn(Optional.of(sampleEvent));
+        when(eventBudgetRepository.findById("event-123")).thenReturn(Optional.of(sampleBudget));
 
-        BudgetSummaryResponse summary = budgetService.getBudgetSummary("event-123");
+        BudgetSummaryResponse summary = budgetService.getBudgetSummary("event-123", "admin-user", "admin");
 
         assertEquals(new BigDecimal("50000"), summary.getTotalBudget());
         assertEquals(new BigDecimal("35000"), summary.getSpent());
@@ -86,10 +88,11 @@ class BudgetServiceTest {
 
     @Test
     void getBudgetSummary_overBudget_flagsCorrectly() {
-        sampleEvent.getBudget().setTotalBudget(new BigDecimal("30000"));
-        when(eventRepository.findById("event-123")).thenReturn(Optional.of(sampleEvent));
+        sampleBudget.setTotalBudget(new BigDecimal("30000"));
+        when(eventAccessClient.getEventAccessSnapshot("event-123")).thenReturn(Optional.of(sampleEvent));
+        when(eventBudgetRepository.findById("event-123")).thenReturn(Optional.of(sampleBudget));
 
-        BudgetSummaryResponse summary = budgetService.getBudgetSummary("event-123");
+        BudgetSummaryResponse summary = budgetService.getBudgetSummary("event-123", "admin-user", "admin");
 
         assertTrue(summary.isOverBudget());
         assertEquals(new BigDecimal("-5000"), summary.getRemaining());
@@ -97,15 +100,16 @@ class BudgetServiceTest {
 
     @Test
     void getBudgetSummary_eventNotFound_throwsException() {
-        when(eventRepository.findById("bad-id")).thenReturn(Optional.empty());
+        when(eventAccessClient.getEventAccessSnapshot("bad-id")).thenReturn(Optional.empty());
 
         assertThrows(ResourceNotFoundException.class, () ->
-                budgetService.getBudgetSummary("bad-id"));
+                budgetService.getBudgetSummary("bad-id", "admin-user", "admin"));
     }
 
     @Test
     void addExpense_updatesSpentCorrectly() {
-        when(eventRepository.findById("event-123")).thenReturn(Optional.of(sampleEvent));
+        when(eventAccessClient.getEventAccessSnapshot("event-123")).thenReturn(Optional.of(sampleEvent));
+        when(eventBudgetRepository.findById("event-123")).thenReturn(Optional.of(sampleBudget));
 
         CreateExpenseRequest request = new CreateExpenseRequest();
         request.setAmount(new BigDecimal("5000"));
@@ -113,36 +117,39 @@ class BudgetServiceTest {
         request.setCategory("MARKETING");
         request.setExpenseDate(LocalDate.now());
 
-        Expense result = budgetService.addExpense("event-123", request);
+        Expense result = budgetService.addExpense("event-123", request, "admin-user", "admin");
 
         assertNotNull(result.getId());
         assertEquals(new BigDecimal("5000"), result.getAmount());
         assertEquals("MARKETING", result.getCategory());
-        verify(mongoTemplate).updateFirst(any(Query.class), any(Update.class), eq(Event.class));
+        verify(eventBudgetRepository).save(any(EventBudget.class));
     }
 
     @Test
     void deleteExpense_removesExpenseSuccessfully() {
-        when(eventRepository.findById("event-123")).thenReturn(Optional.of(sampleEvent));
+        when(eventAccessClient.getEventAccessSnapshot("event-123")).thenReturn(Optional.of(sampleEvent));
+        when(eventBudgetRepository.findById("event-123")).thenReturn(Optional.of(sampleBudget));
 
-        budgetService.deleteExpense("event-123", "exp-1");
+        budgetService.deleteExpense("event-123", "exp-1", "admin-user", "admin");
 
-        verify(mongoTemplate).updateFirst(any(Query.class), any(Update.class), eq(Event.class));
+        verify(eventBudgetRepository).save(any(EventBudget.class));
     }
 
     @Test
     void deleteExpense_expenseNotFound_throwsException() {
-        when(eventRepository.findById("event-123")).thenReturn(Optional.of(sampleEvent));
+        when(eventAccessClient.getEventAccessSnapshot("event-123")).thenReturn(Optional.of(sampleEvent));
+        when(eventBudgetRepository.findById("event-123")).thenReturn(Optional.of(sampleBudget));
 
         assertThrows(ResourceNotFoundException.class, () ->
-                budgetService.deleteExpense("event-123", "non-existent-id"));
+                budgetService.deleteExpense("event-123", "non-existent-id", "admin-user", "admin"));
     }
 
     @Test
     void getExpensesGroupedByCategory_groupsCorrectly() {
-        when(eventRepository.findById("event-123")).thenReturn(Optional.of(sampleEvent));
+        when(eventAccessClient.getEventAccessSnapshot("event-123")).thenReturn(Optional.of(sampleEvent));
+        when(eventBudgetRepository.findById("event-123")).thenReturn(Optional.of(sampleBudget));
 
-        var result = budgetService.getExpensesGroupedByCategory("event-123");
+        var result = budgetService.getExpensesGroupedByCategory("event-123", "admin-user", "admin");
 
         assertEquals(new BigDecimal("10000"), result.get("VENUE"));
         assertEquals(new BigDecimal("25000"), result.get("CATERING"));
