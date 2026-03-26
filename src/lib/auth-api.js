@@ -36,6 +36,16 @@ export async function approveVendorRoleRequest(userId, config) {
   return extractPayload(response);
 }
 
+export async function requestEmailChangeOtp(newEmail, config) {
+  const response = await authApi.post("/me/email-change/request", { newEmail }, config);
+  return extractPayload(response);
+}
+
+export async function verifyEmailChangeOtp(otp, config) {
+  const response = await authApi.post("/me/email-change/verify", { otp }, config);
+  return extractPayload(response);
+}
+
 export async function getUsersByIds(userIds, config) {
   const response = await authApi.post(
     "/users/bulk",

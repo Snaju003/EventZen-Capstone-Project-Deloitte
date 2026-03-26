@@ -1,167 +1,151 @@
-import { useContext, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { motion } from 'framer-motion';
 import { LogOut } from 'lucide-react';
-import { useNavigate, useLocation } from 'react-router-dom';
-import { AuthContext } from '@/context/AuthContext';
+import toast from 'react-hot-toast';
+
 import { ProfileHeroCard } from './components/ProfileHeroCard';
 import { PersonalInfoForm } from './components/PersonalInfoForm';
 import { ChangePasswordForm } from './components/ChangePasswordForm';
+import { Footer } from '@/components/layout/Footer';
+import { getApiErrorMessage, authApi, extractPayload, getMessage } from '@/lib/auth-api';
 import { getMyBookings } from '@/lib/bookings-api';
-import { getEvents } from '@/lib/events-api';
-import toast from 'react-hot-toast';
+import { useAuth } from '@/hooks/useAuth';
+import { staggerContainer, fadeUp } from '@/lib/animations';
 
-const Profile = () => {
-    const { user, isLoading, updateMe, uploadAvatar, logout, fetchMe, requestVendorAccess } = useContext(AuthContext);
+export default function Profile() {
     const navigate = useNavigate();
-    const location = useLocation();
-    const statusMessage = location.state?.statusMessage;
-    const hasHydratedUser = useRef(false);
-    const [roleMetricCount, setRoleMetricCount] = useState(0);
+    const { user: authUser, fetchMe, updateMe, uploadAvatar: contextUploadAvatar, requestEmailChangeOtp, verifyEmailChangeOtp, logout } = useAuth();
+    const [user, setUser] = useState(authUser);
+    const [bookingCount, setBookingCount] = useState(0);
+    const [isLoading, setIsLoading] = useState(false);
+    const [isUploading, setIsUploading] = useState(false);
 
-    useEffect(() => {
-        if (user || hasHydratedUser.current) return;
-
-        hasHydratedUser.current = true;
-        fetchMe().catch(() => {
-            // ProtectedRoute handles unauthenticated state; silently ignore here.
-        });
-    }, [fetchMe, user]);
-
-    useEffect(() => {
-        if (statusMessage) {
-            toast.success(statusMessage, { id: "profile-status" });
-        }
-    }, [statusMessage]);
-
-    const handleLogout = async () => {
+    const loadProfile = useCallback(async () => {
+        setIsLoading(true);
         try {
-            await logout();
-            toast.success('You have been signed out successfully.', { id: 'auth-status' });
+            const [profileData, bookings] = await Promise.all([
+                fetchMe(),
+                getMyBookings().catch(() => []),
+            ]);
+
+            setUser(profileData);
+            setBookingCount(Array.isArray(bookings) ? bookings.length : 0);
+        } catch {
+            toast.error('Unable to load your profile right now.');
         } finally {
-            navigate('/', { replace: true });
+            setIsLoading(false);
         }
-    };
-
-    const vendorRoleStatus = (user?.vendorRoleStatus || 'none').toLowerCase();
-    const canRequestVendorRole = (user?.role || '').toLowerCase() === 'customer' && vendorRoleStatus !== 'pending';
-    const normalizedRole = (user?.role || '').toLowerCase();
-    const showVendorAccessSection = normalizedRole !== 'admin';
+    }, [fetchMe]);
 
     useEffect(() => {
-        let active = true;
+        loadProfile();
+    }, [loadProfile]);
 
-        const loadRoleMetric = async () => {
-            if (!user?.id) {
-                if (active) setRoleMetricCount(0);
-                return;
-            }
-
-            try {
-                if (normalizedRole === 'customer') {
-                    const bookings = await getMyBookings();
-                    if (active) setRoleMetricCount(Array.isArray(bookings) ? bookings.length : 0);
-                    return;
-                }
-
-                if (normalizedRole === 'vendor') {
-                    const events = await getEvents();
-                    const ownEvents = Array.isArray(events)
-                        ? events.filter((event) => event?.createdBy === user.id)
-                        : [];
-                    if (active) setRoleMetricCount(ownEvents.length);
-                    return;
-                }
-
-                if (active) setRoleMetricCount(0);
-            } catch {
-                if (active) setRoleMetricCount(0);
-            }
-        };
-
-        loadRoleMetric();
-
-        return () => {
-            active = false;
-        };
-    }, [normalizedRole, user?.id]);
-
-    const profileStat = useMemo(() => {
-        if (normalizedRole === 'customer') {
-            return { label: 'Total Bookings', show: true };
-        }
-
-        if (normalizedRole === 'vendor') {
-            return { label: 'Total Events', show: true };
-        }
-
-        return { label: '', show: false };
-    }, [normalizedRole]);
-
-    const handleVendorRoleRequest = async () => {
+    const handleAvatarChange = async (file) => {
+        setIsUploading(true);
         try {
-            const result = await requestVendorAccess();
-            toast.success(result?.message || 'Vendor role request submitted.', { id: 'vendor-role-request' });
-        } catch (error) {
-            toast.error(error?.response?.data?.message || 'Unable to submit vendor role request.', { id: 'vendor-role-request-error' });
+            const result = await contextUploadAvatar(file);
+            setUser(result?.user ?? user);
+            toast.success(result?.message || 'Avatar updated');
+        } catch {
+            toast.error('Unable to update your profile picture.');
+        } finally {
+            setIsUploading(false);
         }
     };
 
-    const handleProfileUpdate = (values) => updateMe(values);
+    const handleUpdateProfile = async (payload) => {
+        const result = await updateMe(payload);
+        setUser(result?.user ?? user);
+        return result;
+    };
 
-    const handlePasswordUpdate = (values) => updateMe(values);
+    const handleChangePassword = async (payload) => {
+        const response = await authApi.put('/me/password', payload);
+        return { message: getMessage(response) };
+    };
+
+    const handleRequestEmailOtp = async (email) => {
+        return requestEmailChangeOtp(email);
+    };
+
+    const handleVerifyEmailOtp = async (otp) => {
+        const result = await verifyEmailChangeOtp(otp);
+        setUser(result?.user ?? user);
+        return result;
+    };
 
     return (
-        <div className="relative flex min-h-screen w-full flex-col">
-            <main className="flex-1 max-w-6xl mx-auto w-full px-4 py-8">
-                <div className="mx-auto w-full max-w-3xl flex flex-col gap-6">
+        <div className="relative flex min-h-screen w-full flex-col overflow-hidden">
+            <div className="soft-orb left-[-5rem] top-24 h-44 w-44 bg-indigo-200/30" />
+            <div className="soft-orb right-[-4rem] top-44 h-40 w-40 bg-amber-200/25" style={{ animationDelay: '1s' }} />
+            <main className="page-shell flex flex-1 flex-col py-4">
+                {/* Compact hero row: banner + identity side by side */}
+                <motion.div
+                    initial={{ opacity: 0, y: 12 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.4, ease: "easeOut" }}
+                    className="mb-4 grid grid-cols-1 gap-3 lg:grid-cols-[1fr_auto]"
+                >
+                    {/* Left: slim banner */}
+                    <div className="flex flex-col justify-center rounded-2xl border border-white/70 bg-gradient-to-r from-slate-900 via-slate-800 to-indigo-900 px-5 py-4 text-slate-100 shadow-[0_16px_48px_-24px_rgba(15,23,42,0.5)]">
+                        <div className="flex items-start justify-between">
+                            <div>
+                                <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-400">Account Settings</p>
+                                <h1 className="mt-1 text-2xl font-semibold leading-tight" style={{ fontFamily: "var(--font-serif)" }}>Profile</h1>
+                                <p className="mt-1 max-w-lg text-xs text-slate-300">Manage your personal details, security, and account preferences.</p>
+                            </div>
+                            <button
+                                onClick={() => { 
+                                    navigate('/', { replace: true, state: null }); 
+                                    logout(); 
+                                }}
+                                className="flex shrink-0 items-center gap-1.5 rounded-lg border border-white/15 bg-white/10 px-3 py-1.5 text-xs font-semibold text-slate-200 backdrop-blur transition-all hover:bg-red-500/90 hover:text-white hover:border-red-500"
+                            >
+                                <LogOut className="h-3.5 w-3.5" />
+                                Sign Out
+                            </button>
+                        </div>
+                    </div>
 
+                    {/* Right: compact identity card */}
                     <ProfileHeroCard
                         user={user}
-                        isLoading={isLoading}
-                        onAvatarChange={uploadAvatar}
-                        showStat={profileStat.show}
-                        statLabel={profileStat.label}
-                        statValue={roleMetricCount}
+                        onAvatarChange={handleAvatarChange}
+                        isLoading={isUploading}
+                        showStat
+                        statLabel="My Bookings"
+                        statValue={bookingCount}
                     />
+                </motion.div>
 
-                    <section className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-                        <PersonalInfoForm user={user} isLoading={isLoading} onSubmit={handleProfileUpdate} />
-                        <ChangePasswordForm isLoading={isLoading} onSubmit={handlePasswordUpdate} />
-                    </section>
+                {/* Two-column form layout */}
+                <motion.div
+                    className="grid flex-1 grid-cols-1 gap-3 lg:grid-cols-2"
+                    variants={staggerContainer(0.06, 0.08)}
+                    initial="hidden"
+                    animate="show"
+                >
+                    <motion.div variants={fadeUp} className="flex">
+                        <PersonalInfoForm
+                            user={user}
+                            isLoading={isLoading}
+                            onSubmit={handleUpdateProfile}
+                            onRequestEmailChangeOtp={handleRequestEmailOtp}
+                            onVerifyEmailChangeOtp={handleVerifyEmailOtp}
+                        />
+                    </motion.div>
 
-                    {showVendorAccessSection ? (
-                        <section className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-                            <h2 className="text-lg font-bold text-slate-900">Vendor Access</h2>
-                            <p className="mt-1 text-sm text-slate-500">
-                                Request vendor role to create, publish, and cancel events, and manage event budgets.
-                            </p>
-                            <p className="mt-3 text-sm text-slate-700">
-                                Current request status: <span className="font-semibold uppercase">{vendorRoleStatus}</span>
-                            </p>
-                            <button
-                                type="button"
-                                onClick={handleVendorRoleRequest}
-                                disabled={!canRequestVendorRole || isLoading}
-                                className="mt-4 h-11 rounded-lg bg-primary px-4 font-semibold text-white disabled:cursor-not-allowed disabled:bg-slate-300"
-                            >
-                                {vendorRoleStatus === 'pending' ? 'Request Pending Approval' : 'Request Vendor Role'}
-                            </button>
-                        </section>
-                    ) : null}
-
-                    <section className="bg-white p-2 rounded-xl shadow-sm border border-slate-200">
-                        <button
-                            onClick={handleLogout}
-                            disabled={isLoading}
-                            className="flex items-center justify-center gap-2 w-full py-4 text-red-700 hover:bg-red-100 disabled:opacity-60 rounded-lg transition-colors font-semibold"
-                        >
-                            <LogOut className="w-5 h-5" />
-                            <span>Sign Out</span>
-                        </button>
-                    </section>
-                </div>
+                    <motion.div variants={fadeUp} className="flex">
+                        <ChangePasswordForm
+                            isLoading={isLoading}
+                            onSubmit={handleChangePassword}
+                        />
+                    </motion.div>
+                </motion.div>
             </main>
+            <Footer />
         </div>
     );
-};
-
-export default Profile;
+}

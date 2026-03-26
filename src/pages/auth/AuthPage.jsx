@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { LogIn, UserPlus } from "lucide-react";
+import { AnimatePresence, motion } from "framer-motion";
 import { Navigate, useLocation, useNavigate } from "react-router-dom";
 import { LoginForm } from "@/components/auth/LoginForm";
 import { RegisterForm } from "@/components/auth/RegisterForm";
@@ -7,6 +8,12 @@ import { Button } from "@/components/ui/button";
 import { LogoIcon } from "@/components/ui/Icons";
 import { useAuth } from "@/hooks/useAuth";
 import toast from "react-hot-toast";
+
+const tabVariants = {
+  initial: { opacity: 0, y: 16, scale: 0.98 },
+  animate: { opacity: 1, y: 0, scale: 1 },
+  exit: { opacity: 0, y: -12, scale: 0.98 },
+};
 
 const AuthPage = () => {
   const location = useLocation();
@@ -26,7 +33,6 @@ const AuthPage = () => {
 
     toast.success(statusMessage, { id: "auth-status" });
 
-    // Consume one-time navigation message so it does not replay on refresh.
     navigate(location.pathname, {
       replace: true,
       state: activeTab ? { activeTab } : null,
@@ -35,81 +41,162 @@ const AuthPage = () => {
 
   if (isAuthenticated) {
     const normalizedRole = user?.role?.toLowerCase();
-    const redirectPath = normalizedRole === "admin" || normalizedRole === "vendor" ? "/admin/dashboard" : "/profile";
+    const isAdminOrVendor = normalizedRole === "admin" || normalizedRole === "vendor";
+    
+    let redirectPath = location.state?.from;
+    if (!redirectPath || redirectPath === "/" || redirectPath === "/profile") {
+      redirectPath = isAdminOrVendor ? "/admin/dashboard" : "/events";
+    }
+    
     return <Navigate to={redirectPath} replace />;
   }
 
   return (
-    <div className="min-h-screen w-full flex items-center justify-center px-4 py-10 bg-slate-50">
-      <div
-        key={tab}
-        className="w-full max-w-md bg-white rounded-[20px] shadow-sm border border-slate-100 p-8 animate-[fadeUp_0.38s_ease_both]"
-        style={{ animation: "fadeUp 0.38s ease both" }}
+    <div className="relative min-h-screen w-full overflow-hidden px-4 py-10 sm:px-6 lg:px-8">
+      <motion.div
+        className="pointer-events-none absolute left-[-6rem] top-8 h-60 w-60 rounded-full bg-sky-300/25 blur-3xl"
+        animate={{ x: [0, 10, 0], y: [0, -8, 0] }}
+        transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
+      />
+      <motion.div
+        className="pointer-events-none absolute right-[-7rem] top-32 h-72 w-72 rounded-full bg-amber-300/25 blur-3xl"
+        animate={{ x: [0, -12, 0], y: [0, 10, 0] }}
+        transition={{ duration: 10, repeat: Infinity, ease: "easeInOut" }}
+      />
+
+      <motion.div
+        initial={{ opacity: 0, y: 20, scale: 0.98 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        transition={{ duration: 0.5, ease: "easeOut" }}
+        className="mx-auto grid w-full max-w-5xl items-stretch gap-5 rounded-3xl border border-white/70 bg-white/70 p-3 shadow-[0_28px_80px_-38px_rgba(33,66,118,0.58)] backdrop-blur md:grid-cols-[1fr_1.15fr] md:p-4"
       >
-        <style>{`@keyframes fadeUp { from { opacity:0; transform:translateY(14px); } to { opacity:1; transform:translateY(0); } }`}</style>
+        <aside className="relative hidden overflow-hidden rounded-2xl bg-gradient-to-br from-slate-900 via-slate-800 to-blue-900 p-8 text-slate-100 md:block">
+          <motion.div
+            className="pointer-events-none absolute -right-12 -top-10 h-40 w-40 rounded-full border border-white/20"
+            animate={{ scale: [1, 1.1, 1], rotate: [0, 8, 0] }}
+            transition={{ duration: 12, repeat: Infinity, ease: "easeInOut" }}
+          />
+          <motion.div
+            className="pointer-events-none absolute -bottom-14 -left-10 h-36 w-36 rounded-full bg-cyan-300/20 blur-2xl"
+            animate={{ scale: [1, 1.15, 1] }}
+            transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
+          />
+          <motion.p
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2, duration: 0.4 }}
+            className="inline-flex rounded-full border border-white/25 bg-white/5 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.17em] text-slate-200"
+          >
+            Secure Access
+          </motion.p>
+          <motion.h1
+            initial={{ opacity: 0, y: 14 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3, duration: 0.5 }}
+            className="mt-5 text-4xl font-semibold leading-tight"
+            style={{ fontFamily: "var(--font-serif)" }}
+          >
+            Manage every event touchpoint from one control room.
+          </motion.h1>
+          <motion.p
+            initial={{ opacity: 0, y: 14 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.4, duration: 0.5 }}
+            className="mt-4 max-w-xs text-sm leading-relaxed text-slate-300"
+          >
+            EventZen gives your team a single professional workspace for bookings, venues, budgets, and attendee operations.
+          </motion.p>
+        </aside>
 
-        {/* Brand */}
-        <div className="flex items-center justify-center gap-2.5 text-[#2e4057] mb-6">
-          <LogoIcon />
-          <span className="text-2xl font-bold tracking-tight text-slate-900" style={{ fontFamily: "'Georgia', serif" }}>
-            EventZen
-          </span>
-        </div>
+        <section className="rounded-2xl border border-white/70 bg-white/90 p-7 shadow-sm sm:p-8">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ delay: 0.1, type: "spring", stiffness: 200, damping: 18 }}
+            className="mb-6 flex items-center justify-center gap-2.5 text-slate-700"
+          >
+            <LogoIcon />
+            <span className="text-2xl font-bold tracking-tight text-slate-900" style={{ fontFamily: "var(--font-serif)" }}>
+              EventZen
+            </span>
+          </motion.div>
 
-        {/* Tab toggle */}
-        <div className="flex bg-slate-100 rounded-[10px] p-0.75 gap-0.75 mb-7">
-          {["login", "register"].map((t) => (
-            <Button
-              key={t}
-              type="button"
-              onClick={() => setTab(t)}
-              variant={tab === t ? "outline" : "ghost"}
-              size="sm"
-              className={`flex-1 ${tab === t
-                ? "border-white bg-white text-[#2e4057] shadow-sm hover:bg-white"
-                : "text-slate-500 hover:text-slate-700"
-                }`}
+          <div className="relative mb-7 grid grid-cols-2 rounded-xl bg-slate-100 p-1">
+            {["login", "register"].map((t) => (
+              <Button
+                key={t}
+                type="button"
+                onClick={() => setTab(t)}
+                variant="ghost"
+                size="sm"
+                className={`relative z-10 w-full ${tab === t
+                  ? "text-slate-800 hover:bg-transparent"
+                  : "text-slate-500 hover:text-slate-700"
+                  }`}
+              >
+                {t === "login" ? <LogIn className="size-4" /> : <UserPlus className="size-4" />}
+                {t === "login" ? "Log in" : "Register"}
+                {tab === t ? (
+                  <motion.div
+                    layoutId="auth-tab-indicator"
+                    className="absolute inset-0 rounded-lg bg-white shadow-sm"
+                    style={{ zIndex: -1 }}
+                    transition={{ type: "spring", stiffness: 350, damping: 30 }}
+                  />
+                ) : null}
+              </Button>
+            ))}
+          </div>
+
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={tab}
+              variants={tabVariants}
+              initial="initial"
+              animate="animate"
+              exit="exit"
+              transition={{ duration: 0.25, ease: "easeOut" }}
             >
-              {t === "login" ? <LogIn className="size-4" /> : <UserPlus className="size-4" />}
-              {t === "login" ? "Log in" : "Register"}
-            </Button>
-          ))}
-        </div>
+              {tab === "login" ? <LoginForm /> : <RegisterForm />}
+            </motion.div>
+          </AnimatePresence>
 
-        {/* Forms */}
-        {tab === "login" ? <LoginForm /> : <RegisterForm />}
-
-        {/* Footer link */}
-        <p className="mt-6 text-center text-sm text-slate-500">
-          {tab === "login" ? (
-            <>
-              Don't have an account?{" "}
-              <Button
-                type="button"
-                onClick={() => setTab("register")}
-                variant="link"
-                size="sm"
-                className="h-auto p-0 font-semibold"
-              >
-                Register here
-              </Button>
-            </>
-          ) : (
-            <>
-              Already have an account?{" "}
-              <Button
-                type="button"
-                onClick={() => setTab("login")}
-                variant="link"
-                size="sm"
-                className="h-auto p-0 font-semibold"
-              >
-                Log in
-              </Button>
-            </>
-          )}
-        </p>
-      </div>
+          <motion.p
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.3 }}
+            className="mt-6 text-center text-sm text-slate-500"
+          >
+            {tab === "login" ? (
+              <>
+                Don't have an account?{" "}
+                <Button
+                  type="button"
+                  onClick={() => setTab("register")}
+                  variant="link"
+                  size="sm"
+                  className="h-auto p-0 font-semibold"
+                >
+                  Register here
+                </Button>
+              </>
+            ) : (
+              <>
+                Already have an account?{" "}
+                <Button
+                  type="button"
+                  onClick={() => setTab("login")}
+                  variant="link"
+                  size="sm"
+                  className="h-auto p-0 font-semibold"
+                >
+                  Log in
+                </Button>
+              </>
+            )}
+          </motion.p>
+        </section>
+      </motion.div>
     </div>
   );
 };

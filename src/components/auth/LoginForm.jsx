@@ -11,91 +11,101 @@ import { getFieldErrors, loginSchema } from "@/lib/auth-schemas";
 import toast from "react-hot-toast";
 
 export const LoginForm = () => {
-  const { isLoading, login } = useAuth();
-  const navigate = useNavigate();
-  const location = useLocation();
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
-  const [errors, setErrors] = useState({});
+ const { isLoading, login } = useAuth();
+ const navigate = useNavigate();
+ const location = useLocation();
+ const [email, setEmail] = useState("");
+ const [password, setPassword] = useState("");
+ const [showPassword, setShowPassword] = useState(false);
+ const [errors, setErrors] = useState({});
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setErrors({});
+ const handleSubmit = async (e) => {
+ e.preventDefault();
+ setErrors({});
 
-    const values = { email, password };
-    const parsedValues = loginSchema.safeParse(values);
+ const values = { email, password };
+ const parsedValues = loginSchema.safeParse(values);
 
-    if (!parsedValues.success) {
-      setErrors(getFieldErrors(parsedValues.error));
-      return;
-    }
+ if (!parsedValues.success) {
+ setErrors(getFieldErrors(parsedValues.error));
+ return;
+ }
 
-    try {
-      const result = await login(parsedValues.data);
-      const welcomeName = result?.user?.name ? `, ${result.user.name}` : '';
-      const normalizedRole = result?.user?.role?.toLowerCase();
-      const fallbackPath = normalizedRole === "admin" || normalizedRole === "vendor" ? "/admin/dashboard" : "/profile";
-      navigate(location.state?.from || fallbackPath, {
-        replace: true,
-        state: { statusMessage: result?.message || `Welcome back${welcomeName}!` },
-      });
-    } catch (error) {
-      if (error instanceof z.ZodError) {
-        setErrors(getFieldErrors(error));
-        return;
-      }
+ try {
+ const result = await login(parsedValues.data);
+ const welcomeName = result?.user?.name ? `, ${result.user.name}` : '';
+ const normalizedRole = result?.user?.role?.toLowerCase();
+ 
+ const isAdminOrVendor = normalizedRole === "admin" || normalizedRole === "vendor";
+ let redirectPath = location.state?.from;
+ 
+ // If no redirect path, or if the user came from the public landing page ("/") 
+ // or their profile page (e.g. they logged out there last), 
+ // route them strictly to their core experience area
+ if (!redirectPath || redirectPath === "/" || redirectPath === "/profile") {
+    redirectPath = isAdminOrVendor ? "/admin/dashboard" : "/events";
+ }
 
-      toast.error(getApiErrorMessage(error, "Login failed. Please try again."), { id: "login-error" });
-    }
-  };
+ navigate(redirectPath, {
+ replace: true,
+ state: { statusMessage: result?.message || `Welcome back${welcomeName}!` },
+ });
+ } catch (error) {
+ if (error instanceof z.ZodError) {
+ setErrors(getFieldErrors(error));
+ return;
+ }
 
-  return (
-    <form onSubmit={handleSubmit} noValidate>
+ toast.error(getApiErrorMessage(error, "Login failed. Please try again."), { id: "login-error" });
+ }
+ };
 
-      <InputField
-        label="Email"
-        type="email"
-        placeholder="Enter your email"
-        value={email}
-        onChange={(e) => setEmail(e.target.value)}
-        icon={<MailIcon />}
-        error={errors.email?.[0]}
-        ariaDescribedBy="login-email-error"
-        autoComplete="email"
-      />
-      <InputField
-        label="Password"
-        type="password"
-        placeholder="Enter your password"
-        value={password}
-        onChange={(e) => setPassword(e.target.value)}
-        icon={<LockIcon />}
-        showToggle
-        showPassword={showPassword}
-        onToggle={() => setShowPassword((p) => !p)}
-        error={errors.password?.[0]}
-        ariaDescribedBy="login-password-error"
-        autoComplete="current-password"
-      />
+ return (
+ <form onSubmit={handleSubmit} noValidate>
 
-      <div className="flex justify-end mb-4">
-        <Link
-          to="/forget-password"
-          className="text-sm font-medium text-[#2e4057] hover:underline"
-        >
-          Forgot password?
-        </Link>
-      </div>
+ <InputField
+ label="Email"
+ type="email"
+ placeholder="Enter your email"
+ value={email}
+ onChange={(e) => setEmail(e.target.value)}
+ icon={<MailIcon />}
+ error={errors.email?.[0]}
+ ariaDescribedBy="login-email-error"
+ autoComplete="email"
+ />
+ <InputField
+ label="Password"
+ type="password"
+ placeholder="Enter your password"
+ value={password}
+ onChange={(e) => setPassword(e.target.value)}
+ icon={<LockIcon />}
+ showToggle
+ showPassword={showPassword}
+ onToggle={() => setShowPassword((p) => !p)}
+ error={errors.password?.[0]}
+ ariaDescribedBy="login-password-error"
+ autoComplete="current-password"
+ />
 
-      <Button
-        type="submit"
-        className="w-full"
-        disabled={isLoading}
-      >
-        <ArrowRight className="size-4" />
-        {isLoading ? "Logging in..." : "Log in"}
-      </Button>
-    </form>
-  );
+ <div className="flex justify-end mb-4">
+ <Link
+ to="/forget-password"
+ className="text-sm font-medium text-slate-700 hover:underline"
+ >
+ Forgot password?
+ </Link>
+ </div>
+
+ <Button
+ type="submit"
+ className="w-full"
+ disabled={isLoading}
+ >
+ <ArrowRight className="size-4" />
+ {isLoading ? "Logging in..." : "Log in"}
+ </Button>
+ </form>
+ );
 };
