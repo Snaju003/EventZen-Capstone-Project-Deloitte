@@ -1,0 +1,41 @@
+using System.Text.Json;
+
+namespace BookingService.Services;
+
+public class EventDetails
+{
+    public string Id { get; set; } = string.Empty;
+    public string Status { get; set; } = string.Empty;
+    public int MaxAttendees { get; set; }
+    public DateTime StartTime { get; set; }
+}
+
+public class EventServiceClient
+{
+    private readonly HttpClient _client;
+
+    public EventServiceClient(HttpClient client)
+    {
+        _client = client;
+    }
+
+    public async Task<EventDetails?> GetEventAsync(string eventId)
+    {
+        try
+        {
+            using var request = new HttpRequestMessage(HttpMethod.Get, $"/events/{eventId}");
+            var res = await _client.SendAsync(request);
+            if (!res.IsSuccessStatusCode) return null;
+
+            var json = await res.Content.ReadAsStringAsync();
+            return JsonSerializer.Deserialize<EventDetails>(json, new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true
+            });
+        }
+        catch
+        {
+            return null;
+        }
+    }
+}
