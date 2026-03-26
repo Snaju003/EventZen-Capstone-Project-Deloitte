@@ -7,6 +7,7 @@ import jakarta.validation.constraints.PositiveOrZero;
 import lombok.Data;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Data
 public class EventRequestDTO {
@@ -30,4 +31,9 @@ public class EventRequestDTO {
 
     @Min(value = 1, message = "Max attendees must be greater than 0")
     private Integer maxAttendees;
+
+    @PositiveOrZero(message = "Agreed cost must be 0 or greater")
+    private Double agreedCost;
+
+    private List<String> imageUrls;
 }

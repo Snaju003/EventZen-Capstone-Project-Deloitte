@@ -4,6 +4,8 @@ import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import lombok.Data;
 
+import java.util.List;
+
 @Data
 public class VenueRequestDTO {
 
@@ -16,4 +18,5 @@ public class VenueRequestDTO {
     private Integer capacity;
 
     private String description;
+    private List<String> imageUrls;
 }

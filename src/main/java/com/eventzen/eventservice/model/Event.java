@@ -5,6 +5,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.springframework.data.annotation.Id;
+import org.springframework.data.annotation.Transient;
 import org.springframework.data.mongodb.core.index.Indexed;
 import org.springframework.data.mongodb.core.mapping.Document;
 
@@ -32,13 +33,27 @@ public class Event {
     private LocalDateTime endTime;
     private Double ticketPrice;
     private Integer maxAttendees;
+    @Builder.Default
+    private List<String> imageUrls = new ArrayList<>();
 
     @Indexed
-    private String status; // draft | published | cancelled
+    private String status; // draft | rejected | published | cancelled
+
+    private String approvedBy;
+    private LocalDateTime approvedAt;
+    private String approvedVendorId;
+    private String approvedVendorUserId;
+
+    private String rejectedBy;
+    private LocalDateTime rejectedAt;
+    private String rejectionReason;
 
     // Embedded documents
     private Budget budget;
 
     @Builder.Default
     private List<EventVendor> vendors = new ArrayList<>();
+
+    @Transient
+    private Venue venue;
 }

@@ -9,4 +9,4 @@ server:
 
 logging:
   level:
-    com.eventzen: ${LOG_LEVEL}
+    com.eventzen: ${LOG_LEVEL:INFO}

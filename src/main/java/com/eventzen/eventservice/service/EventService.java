@@ -1,160 +1,125 @@
 package com.eventzen.eventservice.service;
 
+import com.eventzen.eventservice.dto.EventPageResponse;
 import com.eventzen.eventservice.dto.EventRequestDTO;
 import com.eventzen.eventservice.dto.VendorAssignmentDTO;
-import com.eventzen.eventservice.exception.ForbiddenException;
-import com.eventzen.eventservice.exception.ResourceNotFoundException;
-import com.eventzen.eventservice.model.Budget;
 import com.eventzen.eventservice.model.Event;
-import com.eventzen.eventservice.model.EventVendor;
 import com.eventzen.eventservice.repository.EventRepository;
-import com.eventzen.eventservice.repository.VenueRepository;
 import com.eventzen.eventservice.repository.VendorRepository;
-import lombok.RequiredArgsConstructor;
+import com.eventzen.eventservice.repository.VenueRepository;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
-import java.util.ArrayList;
+import java.time.LocalDate;
 import java.util.List;
 
 @Service
-@RequiredArgsConstructor
 public class EventService {
 
-    private final EventRepository eventRepository;
-    private final VenueRepository venueRepository;
-    private final VendorRepository vendorRepository;
+    private final EventReadOperations eventReadOperations;
+    private final EventLifecycleOperations eventLifecycleOperations;
+    private final EventAssignmentOperations eventAssignmentOperations;
 
-    // ─── CRUD ──────────────────────────────────────────────────────────────────
+    @Value("${EVENT_MIN_LEAD_HOURS:24}")
+    private long eventMinLeadHours;
 
-    public Event createEvent(EventRequestDTO dto, String createdBy) {
-        // Validate venue exists
-        venueRepository.findById(dto.getVenueId())
-                .orElseThrow(() -> new ResourceNotFoundException("Venue", dto.getVenueId()));
+    public EventService(EventRepository eventRepository, VenueRepository venueRepository, VendorRepository vendorRepository) {
+        EventValidationOperations eventValidationOperations = new EventValidationOperations(eventRepository, venueRepository);
+        EventVendorOperations eventVendorOperations = new EventVendorOperations(vendorRepository);
 
-        // Validate time range
-        if (!dto.getStartTime().isBefore(dto.getEndTime())) {
-            throw new IllegalArgumentException("startTime must be before endTime");
-        }
-
-        Event event = Event.builder()
-                .title(dto.getTitle())
-                .description(dto.getDescription())
-                .venueId(dto.getVenueId())
-                .createdBy(createdBy)
-                .startTime(dto.getStartTime())
-                .endTime(dto.getEndTime())
-                .ticketPrice(dto.getTicketPrice())
-                .maxAttendees(dto.getMaxAttendees())
-                .status("draft")
-                .budget(Budget.builder().totalBudget(0.0).spent(0.0).expenses(new ArrayList<>()).build())
-                .vendors(new ArrayList<>())
-                .build();
-
-        return eventRepository.save(event);
+        this.eventReadOperations = new EventReadOperations(eventRepository, venueRepository);
+        this.eventLifecycleOperations = new EventLifecycleOperations(
+                eventRepository,
+                eventReadOperations,
+                eventValidationOperations,
+                eventVendorOperations
+        );
+        this.eventAssignmentOperations = new EventAssignmentOperations(
+                eventRepository,
+                vendorRepository,
+                eventReadOperations,
+                eventValidationOperations,
+                eventVendorOperations
+        );
     }
 
-    public List<Event> getEvents(String role) {
-        if ("admin".equalsIgnoreCase(role)) {
-            return eventRepository.findAll();
-        }
-        // customers only see published events
-        return eventRepository.findByStatus("published");
+    public Event createEvent(EventRequestDTO dto, String createdBy, String creatorRole) {
+        return eventLifecycleOperations.createEvent(dto, createdBy, creatorRole, eventMinLeadHours);
+    }
+
+    public List<Event> getEvents(String requesterId, String role, String status, String venueId, LocalDate startDate, LocalDate endDate) {
+        return eventReadOperations.getEvents(requesterId, role, status, venueId, startDate, endDate);
+    }
+
+    public EventPageResponse getEventsPage(
+            String requesterId,
+            String role,
+            String status,
+            String venueId,
+            LocalDate startDate,
+            LocalDate endDate,
+            String search,
+            Integer page,
+            Integer size,
+            String sortBy,
+            String sortDir
+    ) {
+        return eventReadOperations.getEventsPage(
+                requesterId,
+                role,
+                status,
+                venueId,
+                startDate,
+                endDate,
+                search,
+                page,
+                size,
+                sortBy,
+                sortDir
+        );
     }
 
     public Event getEventById(String id) {
-        return eventRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Event", id));
+        return eventReadOperations.getEventById(id);
     }
 
-    public Event updateEvent(String id, EventRequestDTO dto) {
-        Event event = getEventById(id);
+    public Event getEventByIdInternal(String id) {
+        return eventReadOperations.getEventByIdInternal(id);
+    }
 
-        if ("cancelled".equals(event.getStatus())) {
-            throw new ForbiddenException("Cannot update a cancelled event");
-        }
+    public Event getEventByIdForRequester(String id, String requesterId, String requesterRole) {
+        return eventReadOperations.getEventByIdForRequester(id, requesterId, requesterRole);
+    }
 
-        // Validate venue exists
-        venueRepository.findById(dto.getVenueId())
-                .orElseThrow(() -> new ResourceNotFoundException("Venue", dto.getVenueId()));
-
-        // Validate time range
-        if (!dto.getStartTime().isBefore(dto.getEndTime())) {
-            throw new IllegalArgumentException("startTime must be before endTime");
-        }
-
-        event.setTitle(dto.getTitle());
-        event.setDescription(dto.getDescription());
-        event.setVenueId(dto.getVenueId());
-        event.setStartTime(dto.getStartTime());
-        event.setEndTime(dto.getEndTime());
-        event.setTicketPrice(dto.getTicketPrice());
-        event.setMaxAttendees(dto.getMaxAttendees());
-
-        return eventRepository.save(event);
+    public Event updateEvent(String id, EventRequestDTO dto, String requesterId, String requesterRole) {
+        return eventLifecycleOperations.updateEvent(id, dto, requesterId, requesterRole, eventMinLeadHours);
     }
 
     public void deleteEvent(String id) {
-        getEventById(id); // ensure it exists
-        eventRepository.deleteById(id);
+        eventLifecycleOperations.deleteEvent(id);
     }
 
-    // ─── Lifecycle ─────────────────────────────────────────────────────────────
-
-    public Event publishEvent(String id) {
-        Event event = getEventById(id);
-
-        if (!"draft".equals(event.getStatus())) {
-            throw new IllegalArgumentException("Only draft events can be published");
-        }
-
-        event.setStatus("published");
-        return eventRepository.save(event);
+    public Event publishEvent(String id, String requesterId, String requesterRole) {
+        return eventLifecycleOperations.publishEvent(id, requesterId, requesterRole, eventMinLeadHours);
     }
 
-    public Event cancelEvent(String id) {
-        Event event = getEventById(id);
-
-        if ("cancelled".equals(event.getStatus())) {
-            throw new IllegalArgumentException("Event is already cancelled");
-        }
-
-        event.setStatus("cancelled");
-        return eventRepository.save(event);
+    public Event rejectEvent(String id, String rejectionReason, String requesterId, String requesterRole) {
+        return eventLifecycleOperations.rejectEvent(id, rejectionReason, requesterId, requesterRole);
     }
 
-    // ─── Vendor Assignment ─────────────────────────────────────────────────────
-
-    public Event addVendorToEvent(String eventId, VendorAssignmentDTO dto) {
-        Event event = getEventById(eventId);
-
-        // Validate vendor exists
-        vendorRepository.findById(dto.getVendorId())
-                .orElseThrow(() -> new ResourceNotFoundException("Vendor", dto.getVendorId()));
-
-        // Check if vendor already assigned
-        boolean alreadyAssigned = event.getVendors().stream()
-                .anyMatch(v -> v.getVendorId().equals(dto.getVendorId()));
-        if (alreadyAssigned) {
-            throw new IllegalArgumentException("Vendor is already assigned to this event");
-        }
-
-        EventVendor eventVendor = EventVendor.builder()
-                .vendorId(dto.getVendorId())
-                .agreedCost(dto.getAgreedCost())
-                .build();
-
-        event.getVendors().add(eventVendor);
-        return eventRepository.save(event);
+    public Event cancelEvent(String id, String requesterId, String requesterRole) {
+        return eventLifecycleOperations.cancelEvent(id, requesterId, requesterRole);
     }
 
-    public Event removeVendorFromEvent(String eventId, String vendorId) {
-        Event event = getEventById(eventId);
+    public Event addVendorToEvent(String eventId, VendorAssignmentDTO dto, String requesterRole) {
+        return eventAssignmentOperations.addVendorToEvent(eventId, dto, requesterRole);
+    }
 
-        boolean removed = event.getVendors().removeIf(v -> v.getVendorId().equals(vendorId));
-        if (!removed) {
-            throw new ResourceNotFoundException("Vendor assignment not found for vendorId: " + vendorId);
-        }
+    public Event approveEventVendor(String eventId, String vendorId, String requesterId, String requesterRole) {
+        return eventAssignmentOperations.approveEventVendor(eventId, vendorId, requesterId, requesterRole);
+    }
 
-        return eventRepository.save(event);
+    public Event removeVendorFromEvent(String eventId, String vendorId, String requesterRole) {
+        return eventAssignmentOperations.removeVendorFromEvent(eventId, vendorId, requesterRole);
     }
 }

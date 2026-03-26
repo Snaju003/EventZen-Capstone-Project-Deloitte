@@ -1,6 +1,7 @@
 package com.eventzen.eventservice.controller;
 
 import com.eventzen.eventservice.dto.VendorRequestDTO;
+import com.eventzen.eventservice.dto.VendorRoleSyncRequestDTO;
 import com.eventzen.eventservice.exception.ForbiddenException;
 import com.eventzen.eventservice.model.Vendor;
 import com.eventzen.eventservice.service.VendorService;
@@ -19,9 +20,11 @@ public class VendorController {
 
     private final VendorService vendorService;
 
-    // GET /vendors - public (both roles)
+    // GET /vendors - admin only
     @GetMapping
-    public ResponseEntity<List<Vendor>> getAllVendors() {
+    public ResponseEntity<List<Vendor>> getAllVendors(
+            @RequestHeader("X-User-Role") String role) {
+        requireAdmin(role);
         return ResponseEntity.ok(vendorService.getVendors());
     }
 
@@ -33,6 +36,16 @@ public class VendorController {
 
         requireAdmin(role);
         return ResponseEntity.status(HttpStatus.CREATED).body(vendorService.createVendor(dto));
+    }
+
+    // POST /vendors/role-sync - internal approval sync
+    @PostMapping("/role-sync")
+    public ResponseEntity<Vendor> syncApprovedVendorRole(
+            @RequestHeader("X-User-Role") String role,
+            @Valid @RequestBody VendorRoleSyncRequestDTO dto) {
+
+        requireAdmin(role);
+        return ResponseEntity.status(HttpStatus.CREATED).body(vendorService.syncVendorFromApprovedRole(dto));
     }
 
     // PUT /vendors/{id} - admin only

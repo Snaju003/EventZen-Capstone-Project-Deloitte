@@ -9,7 +9,9 @@ import com.eventzen.eventservice.repository.VenueRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -24,6 +26,7 @@ public class VenueService {
                 .address(dto.getAddress())
                 .capacity(dto.getCapacity())
                 .description(dto.getDescription())
+                .imageUrls(normalizeImageUrls(dto.getImageUrls()))
                 .build();
         return venueRepository.save(venue);
     }
@@ -43,17 +46,37 @@ public class VenueService {
         venue.setAddress(dto.getAddress());
         venue.setCapacity(dto.getCapacity());
         venue.setDescription(dto.getDescription());
+
+        if (dto.getImageUrls() != null) {
+            venue.setImageUrls(normalizeImageUrls(dto.getImageUrls()));
+        }
+
         return venueRepository.save(venue);
     }
 
     public void deleteVenue(String id) {
         getVenueById(id); // ensure it exists
 
-        boolean hasEvents = !eventRepository.findByVenueId(id).isEmpty();
+        boolean hasEvents = eventRepository.findByVenueId(id)
+                .stream()
+                .anyMatch(event -> "published".equalsIgnoreCase(event.getStatus()));
         if (hasEvents) {
-            throw new ForbiddenException("Cannot delete venue: it is referenced by one or more events");
+            throw new ForbiddenException("Cannot delete venue: it is referenced by one or more published events");
         }
 
         venueRepository.deleteById(id);
+    }
+
+    private List<String> normalizeImageUrls(List<String> imageUrls) {
+        if (imageUrls == null) {
+            return new ArrayList<>();
+        }
+
+        return imageUrls.stream()
+                .filter(url -> url != null && !url.trim().isEmpty())
+                .map(String::trim)
+                .distinct()
+                .limit(10)
+                .collect(Collectors.toCollection(ArrayList::new));
     }
 }

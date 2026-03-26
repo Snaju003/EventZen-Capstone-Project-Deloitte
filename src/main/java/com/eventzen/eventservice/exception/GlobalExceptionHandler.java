@@ -22,6 +22,11 @@ public class GlobalExceptionHandler {
         return buildError(ex.getMessage(), HttpStatus.FORBIDDEN);
     }
 
+    @ExceptionHandler(ConflictException.class)
+    public ResponseEntity<Map<String, Object>> handleConflict(ConflictException ex) {
+        return buildError(ex.getMessage(), HttpStatus.CONFLICT);
+    }
+
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<Map<String, Object>> handleBadRequest(IllegalArgumentException ex) {
         return buildError(ex.getMessage(), HttpStatus.BAD_REQUEST);
