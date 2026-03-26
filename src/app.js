@@ -1,9 +1,12 @@
-// src/app.js
 const express = require("express");
 const cors = require("cors");
+const path = require("path");
 const authRoutes = require("./routes/auth.routes");
 
 const app = express();
+
+// Serve static files from the uploads directory
+app.use("/uploads", express.static(path.join(__dirname, "../uploads")));
 
 // Middleware
 const allowedOrigins = (
@@ -30,7 +33,7 @@ const corsOptions = {
   },
   credentials: true,
   methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-  allowedHeaders: ["Content-Type", "Authorization"],
+  allowedHeaders: ["Content-Type", "Authorization", "X-CSRF-Token"],
   optionsSuccessStatus: 204,
 };
 
@@ -43,9 +46,15 @@ app.use("/", authRoutes);
 
 // Global error handler
 app.use((err, req, res, next) => {
-  res.status(err.status || 500).json({
+  const response = {
     message: err.message || "Internal Server Error",
-  });
+  };
+
+  if (typeof err.retryAfterSeconds === "number") {
+    response.retryAfterSeconds = Math.max(0, Math.floor(err.retryAfterSeconds));
+  }
+
+  res.status(err.status || 500).json(response);
 });
 
 module.exports = app;

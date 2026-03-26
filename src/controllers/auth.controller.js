@@ -1,3 +1,8 @@
+const { rotateCsrfCookie } = require("../utils/authCookies");
+const publicHandlers = require("./auth/public.handlers");
+const profileHandlers = require("./auth/profile.handlers");
+const adminHandlers = require("./auth/admin.handlers");
+
 class AuthController {
 	constructor({ authService }) {
 		this.authService = authService;
@@ -11,91 +16,28 @@ class AuthController {
 		this.getMe = this.getMe.bind(this);
 		this.updateMe = this.updateMe.bind(this);
 		this.deleteMe = this.deleteMe.bind(this);
+		this.uploadAvatar = this.uploadAvatar.bind(this);
+		this.uploadMediaImages = this.uploadMediaImages.bind(this);
+		this.promoteUser = this.promoteUser.bind(this);
+		this.requestVendorRole = this.requestVendorRole.bind(this);
+		this.getVendorRoleRequests = this.getVendorRoleRequests.bind(this);
+		this.approveVendorRoleRequest = this.approveVendorRoleRequest.bind(this);
+		this.getUsersByIdsForAdmin = this.getUsersByIdsForAdmin.bind(this);
+		this.getUsersByIds = this.getUsersByIds.bind(this);
+		this.forgotPassword = this.forgotPassword.bind(this);
+		this.verifyResetOtp = this.verifyResetOtp.bind(this);
+		this.resetPassword = this.resetPassword.bind(this);
+		this.getCsrfToken = this.getCsrfToken.bind(this);
+		this.requestEmailChangeOtp = this.requestEmailChangeOtp.bind(this);
+		this.verifyEmailChangeOtp = this.verifyEmailChangeOtp.bind(this);
 	}
 
-	async register(req, res, next) {
-		try {
-			const result = await this.authService.registerUser(req.body);
-			return res.status(201).json(result);
-		} catch (error) {
-			return next(error);
-		}
-	}
-
-	async verifyOtp(req, res, next) {
-		try {
-			const result = await this.authService.verifyOtp(req.body);
-			return res.status(200).json(result);
-		} catch (error) {
-			return next(error);
-		}
-	}
-
-	async resendOtp(req, res, next) {
-		try {
-			const result = await this.authService.resendOtp(req.body);
-			return res.status(200).json(result);
-		} catch (error) {
-			return next(error);
-		}
-	}
-
-	async login(req, res, next) {
-		try {
-			const result = await this.authService.loginUser(req.body);
-			return res.status(200).json(result);
-		} catch (error) {
-			return next(error);
-		}
-	}
-
-	async refreshToken(req, res, next) {
-		try {
-			const result = await this.authService.refreshTokens(req.body);
-			return res.status(200).json(result);
-		} catch (error) {
-			return next(error);
-		}
-	}
-
-	async logout(req, res, next) {
-		try {
-			const result = await this.authService.logout(req.body);
-			return res.status(200).json(result);
-		} catch (error) {
-			return next(error);
-		}
-	}
-
-	async getMe(req, res, next) {
-		try {
-			const user = await this.authService.getCurrentUser(req.user.sub);
-			return res.status(200).json({ user });
-		} catch (error) {
-			return next(error);
-		}
-	}
-
-	async updateMe(req, res, next) {
-		try {
-			const user = await this.authService.updateCurrentUser(req.user.sub, req.body);
-			return res.status(200).json({
-				message: "User updated successfully",
-				user,
-			});
-		} catch (error) {
-			return next(error);
-		}
-	}
-
-	async deleteMe(req, res, next) {
-		try {
-			const result = await this.authService.deleteCurrentUser(req.user.sub);
-			return res.status(200).json(result);
-		} catch (error) {
-			return next(error);
-		}
+	issueCsrfToken(res) {
+		const csrfToken = rotateCsrfCookie(res);
+		return csrfToken;
 	}
 }
+
+Object.assign(AuthController.prototype, publicHandlers, profileHandlers, adminHandlers);
 
 module.exports = AuthController;

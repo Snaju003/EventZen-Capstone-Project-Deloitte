@@ -24,16 +24,47 @@ const userSchema = new mongoose.Schema(
 		role: {
 			type: String,
 			required: true,
-			default: "user",
+			default: "customer",
+		},
+		vendorRoleStatus: {
+			type: String,
+			required: true,
+			default: "none",
+			enum: ["none", "pending", "approved"],
+		},
+		vendorRoleRequestedAt: {
+			type: Date,
+		},
+		vendorRoleApprovedAt: {
+			type: Date,
 		},
 		isVerified: {
 			type: Boolean,
 			default: false,
 		},
+		avatar: {
+			type: String,
+			default: "",
+		},
 		otp: {
 			type: String, // stored as SHA-256 hash
 		},
 		otpExpiresAt: {
+			type: Date,
+		},
+		emailChangePendingEmail: {
+			type: String,
+			lowercase: true,
+			trim: true,
+			match: [EMAIL_REGEX, "Please enter a valid email address"],
+		},
+		emailChangeOtp: {
+			type: String,
+		},
+		emailChangeOtpExpiresAt: {
+			type: Date,
+		},
+		emailChangeOtpRequestedAt: {
 			type: Date,
 		},
 		created_at: {

@@ -8,13 +8,13 @@ class JwtTokenService {
 	}
 
 	// ── Access Token ───────────────────────────────────────────────
-	generateToken(payload) {
+	generateToken(payload, { expiresIn } = {}) {
 		if (!this.config.secret) {
 			throw new Error("JWT_SECRET is not configured");
 		}
 
 		return this.jwt.sign(payload, this.config.secret, {
-			expiresIn: this.config.expiresIn,
+			expiresIn: expiresIn || this.config.expiresIn,
 		});
 	}
 
