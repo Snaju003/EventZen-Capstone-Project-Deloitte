@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { Calendar as CalendarIcon, Clock } from "lucide-react";
 
-import { Calendar } from "@/components/ui/calender";
+import { Calendar } from "@/components/ui/calendar";
 import {
   MONTHS,
   TIME_SLOTS,

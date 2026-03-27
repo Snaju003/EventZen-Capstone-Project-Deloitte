@@ -2,8 +2,14 @@ import { useRef, useState, useEffect } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { Calendar as CalendarIcon, X } from "lucide-react";
 
-import { Calendar } from "@/components/ui/calender";
-import CustomDropdown from "@/components/ui/CustomDropdown";
+import { Calendar } from "@/components/ui/calendar";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 function formatShortDate(date) {
   return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
@@ -138,14 +144,19 @@ export function EventsFiltersPanel({ filters, onFilterChange, onResetFilters, ve
       </div>
 
       <div>
-        <label htmlFor="events-venue-dropdown" className="sr-only">Filter by venue</label>
-        <CustomDropdown
-          id="events-venue-dropdown"
-          placeholder="All venues"
-          options={venueOptions}
+        <Select
           value={filters.venueId}
-          onChange={(value) => onFilterChange("venueId", value)}
-        />
+          onValueChange={(value) => onFilterChange("venueId", value)}
+        >
+          <SelectTrigger className="h-11 w-full rounded-xl border-slate-200/80 bg-white/95 shadow-sm">
+            <SelectValue placeholder="All venues" />
+          </SelectTrigger>
+          <SelectContent>
+            {venueOptions.map((opt) => (
+              <SelectItem key={opt.value} value={opt.value || "__all__"}>{opt.label}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
       <div>
@@ -158,14 +169,19 @@ export function EventsFiltersPanel({ filters, onFilterChange, onResetFilters, ve
       </div>
 
       <div>
-        <label htmlFor="events-sort-dropdown" className="sr-only">Sort events</label>
-        <CustomDropdown
-          id="events-sort-dropdown"
-          placeholder="Sort by"
-          options={sortOptions}
+        <Select
           value={filters.sortDir || "asc"}
-          onChange={(value) => onFilterChange("sortDir", value)}
-        />
+          onValueChange={(value) => onFilterChange("sortDir", value)}
+        >
+          <SelectTrigger className="h-11 w-full rounded-xl border-slate-200/80 bg-white/95 shadow-sm">
+            <SelectValue placeholder="Sort by" />
+          </SelectTrigger>
+          <SelectContent>
+            {sortOptions.map((opt) => (
+              <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
       {hasAnyFilter ? (

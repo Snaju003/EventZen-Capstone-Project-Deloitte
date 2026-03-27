@@ -2,8 +2,14 @@ import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { Calendar as CalendarIcon } from "lucide-react";
 
-import { Calendar } from "@/components/ui/calender";
-import CustomDropdown from "@/components/ui/CustomDropdown";
+import { Calendar } from "@/components/ui/calendar";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { BudgetReceiptIcon } from "@/pages/admin/components/budget/BudgetIcons";
 
 function formatDisplayDate(dateStr) {
@@ -60,11 +66,10 @@ function SingleDatePicker({ label, id, value, onChange, disabled, required }) {
         type="button"
         disabled={disabled}
         onClick={() => setOpen((c) => !c)}
-        className={`flex h-11 w-full items-center justify-between rounded-lg border bg-white px-3 text-sm transition-all ${
-          open
+        className={`flex h-11 w-full items-center justify-between rounded-lg border bg-white px-3 text-sm transition-all ${open
             ? "border-primary/50 ring-2 ring-primary/20"
             : "border-slate-200 hover:border-slate-300"
-        } ${disabled ? "cursor-not-allowed opacity-60" : "cursor-pointer"}`}
+          } ${disabled ? "cursor-not-allowed opacity-60" : "cursor-pointer"}`}
       >
         <span className={value ? "text-slate-900" : "text-slate-400"}>
           {value ? formatDisplayDate(value) : "Select a date"}
@@ -77,7 +82,7 @@ function SingleDatePicker({ label, id, value, onChange, disabled, required }) {
           type="text"
           required
           value={value}
-          onChange={() => {}}
+          onChange={() => { }}
           tabIndex={-1}
           className="absolute bottom-0 left-0 h-0 w-0 opacity-0"
           aria-hidden="true"
@@ -173,14 +178,23 @@ export function AddExpenseSection({
           </div>
 
           <div>
-            <CustomDropdown
-              label="Category"
-              id="expense-category"
-              options={categoryOptions}
+            <label className="mb-1.5 block text-sm font-medium text-slate-700">
+              Category
+            </label>
+            <Select
               value={expenseForm.category}
-              onChange={(value) => onExpenseFormChange({ category: value })}
+              onValueChange={(value) => onExpenseFormChange({ category: value })}
               disabled={isAddingExpense}
-            />
+            >
+              <SelectTrigger className="h-11 w-full">
+                <SelectValue placeholder="Select a category" />
+              </SelectTrigger>
+              <SelectContent>
+                {categoryOptions.map((opt) => (
+                  <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
         </div>
 

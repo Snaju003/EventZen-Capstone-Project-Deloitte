@@ -1,7 +1,24 @@
 import { Link, useNavigate } from "react-router-dom";
+import {
+  Edit,
+  Ban,
+  Trash2,
+  CheckCircle,
+  Users,
+  Wallet,
+  MoreVertical,
+  XCircle,
+} from "lucide-react";
 
 import { ClampedDescription } from "@/components/common/ClampedDescription";
 import { ImageCarousel } from "@/components/ui/ImageCarousel";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { formatINR } from "@/lib/currency";
 
 function getStatusBadge(status) {
@@ -68,9 +85,70 @@ export function AdminEventCard({
         <div>
           <div className="flex items-center justify-between gap-2">
             <h3 className="text-lg font-bold text-slate-900">{event.title || "Untitled event"}</h3>
-            <span className={`inline-flex rounded-full border px-2 py-0.5 text-[11px] font-semibold ${statusBadgeClass}`}>
-              {statusBadgeLabel}
-            </span>
+            <div className="flex items-center gap-2">
+              <span className={`inline-flex rounded-full border px-2 py-0.5 text-[11px] font-semibold ${statusBadgeClass}`}>
+                {statusBadgeLabel}
+              </span>
+
+              {/* ── ShadCN Dropdown Menu ── */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button
+                    type="button"
+                    aria-label={`Actions for ${event.title || "event"}`}
+                    className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 transition-colors hover:bg-slate-50 hover:text-slate-700 focus:outline-none focus:ring-2 focus:ring-primary/20"
+                  >
+                    <MoreVertical className="h-4 w-4" />
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-48">
+                  <DropdownMenuItem onClick={() => onEdit(event)}>
+                    <Edit className="mr-2 h-4 w-4" />
+                    Edit
+                  </DropdownMenuItem>
+
+                  {isAdmin && normalizedStatus === "draft" ? (
+                    <DropdownMenuItem onClick={() => onOpenPublishDialog(event)}>
+                      <CheckCircle className="mr-2 h-4 w-4 text-emerald-600" />
+                      Approve
+                    </DropdownMenuItem>
+                  ) : null}
+
+                  {isAdmin && normalizedStatus === "draft" ? (
+                    <DropdownMenuItem onClick={() => onOpenRejectDialog(event)} variant="destructive">
+                      <XCircle className="mr-2 h-4 w-4" />
+                      Reject
+                    </DropdownMenuItem>
+                  ) : null}
+
+                  <DropdownMenuItem onClick={() => onCancelEvent(event.id)}>
+                    <Ban className="mr-2 h-4 w-4 text-amber-600" />
+                    Cancel
+                  </DropdownMenuItem>
+
+                  {isAdmin ? (
+                    <DropdownMenuItem onClick={() => onDeleteEvent(event.id)} variant="destructive">
+                      <Trash2 className="mr-2 h-4 w-4" />
+                      Delete
+                    </DropdownMenuItem>
+                  ) : null}
+
+                  <DropdownMenuSeparator />
+
+                  {isAdmin ? (
+                    <DropdownMenuItem onClick={() => navigate(`/admin/events/${event.id}/attendees`)}>
+                      <Users className="mr-2 h-4 w-4" />
+                      Attendees
+                    </DropdownMenuItem>
+                  ) : null}
+
+                  <DropdownMenuItem onClick={() => navigate(`/admin/budget/${event.id}`)}>
+                    <Wallet className="mr-2 h-4 w-4" />
+                    Budget
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
           </div>
           <div className="mt-1">
             <ClampedDescription
@@ -87,59 +165,6 @@ export function AdminEventCard({
             <p className="mt-1 text-xs font-medium text-rose-900">
               Rejection reason: {event.rejectionReason || "No reason provided."}
             </p>
-          ) : null}
-        </div>
-
-        <div className="flex flex-wrap gap-2">
-          <button
-            type="button"
-            onClick={() => onEdit(event)}
-            aria-label={`Edit ${event.title || "event"}`}
-            className="rounded-md border border-slate-200 px-3 py-1.5 text-sm"
-          >
-            Edit
-          </button>
-
-          {isAdmin && normalizedStatus === "draft" ? (
-            <button
-              type="button"
-              onClick={() => onOpenPublishDialog(event)}
-              aria-label={`Approve and publish ${event.title || "event"}`}
-              className="rounded-md border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-sm text-emerald-700"
-            >
-              Approve & Publish
-            </button>
-          ) : null}
-
-          {isAdmin && normalizedStatus === "draft" ? (
-            <button
-              type="button"
-              onClick={() => onOpenRejectDialog(event)}
-              aria-label={`Reject ${event.title || "event"}`}
-              className="rounded-md border border-red-300 bg-red-100 px-3 py-1.5 text-sm text-red-900"
-            >
-              Reject
-            </button>
-          ) : null}
-
-          <button
-            type="button"
-            onClick={() => onCancelEvent(event.id)}
-            aria-label={`Cancel ${event.title || "event"}`}
-            className="rounded-md border border-amber-300 bg-amber-100 px-3 py-1.5 text-sm text-amber-900"
-          >
-            Cancel
-          </button>
-
-          {isAdmin ? (
-            <button
-              type="button"
-              onClick={() => onDeleteEvent(event.id)}
-              aria-label={`Delete ${event.title || "event"}`}
-              className="rounded-md border border-red-300 bg-red-100 px-3 py-1.5 text-sm text-red-900"
-            >
-              Delete
-            </button>
           ) : null}
         </div>
       </div>
@@ -192,17 +217,6 @@ export function AdminEventCard({
             Vendor and agreed cost were provided by the event creator. No additional assignment is needed.
           </p>
         ) : null}
-
-        <div className="flex flex-wrap gap-2">
-          {isAdmin ? (
-            <Link to={`/admin/events/${event.id}/attendees`} className="inline-flex h-10 items-center rounded-md border border-slate-200 px-3 text-sm font-medium">
-              Attendees
-            </Link>
-          ) : null}
-          <Link to={`/admin/budget/${event.id}`} className="inline-flex h-10 items-center rounded-md border border-slate-200 px-3 text-sm font-medium">
-            Budget
-          </Link>
-        </div>
       </div>
 
       {isAdmin && event.vendors?.length ? (
