@@ -9,12 +9,21 @@ public class BookingService : IBookingService
     private readonly IBookingRepository _repo;
     private readonly EventServiceClient _eventClient;
     private readonly AuthServiceClient _authClient;
+    private readonly IEmailService _emailService;
+    private readonly ILogger<BookingService> _logger;
 
-    public BookingService(IBookingRepository repo, EventServiceClient eventClient, AuthServiceClient authClient)
+    public BookingService(
+        IBookingRepository repo,
+        EventServiceClient eventClient,
+        AuthServiceClient authClient,
+        IEmailService emailService,
+        ILogger<BookingService> logger)
     {
         _repo = repo;
         _eventClient = eventClient;
         _authClient = authClient;
+        _emailService = emailService;
+        _logger = logger;
     }
 
     public async Task<(Booking?,string?,int)> CreateBookingAsync(string userId, CreateBookingDto dto)
@@ -40,6 +49,38 @@ public class BookingService : IBookingService
         };
 
         var created = await _repo.CreateAsync(booking);
+
+        // Fire-and-forget: send booking confirmation email
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                var user = await _authClient.GetUserByIdAsync(userId);
+                if (user == null || string.IsNullOrWhiteSpace(user.Email))
+                {
+                    _logger.LogWarning(
+                        "Skipping confirmation email for booking {BookingId}: user not found",
+                        created.Id);
+                    return;
+                }
+
+                await _emailService.SendBookingConfirmationAsync(
+                    created,
+                    user.Name,
+                    user.Email,
+                    eventDetails.Title,
+                    eventDetails.StartTime,
+                    eventDetails.Venue?.Name ?? "Venue TBA"
+                );
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex,
+                    "Error in fire-and-forget email task for booking {BookingId}",
+                    created.Id);
+            }
+        });
+
         return (created, null, 201);
     }
 

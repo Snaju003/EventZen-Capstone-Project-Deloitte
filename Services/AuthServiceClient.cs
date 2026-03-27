@@ -65,4 +65,13 @@ public class AuthServiceClient
             return new Dictionary<string, AuthUserDto>(StringComparer.Ordinal);
         }
     }
+
+    public async Task<AuthUserDto?> GetUserByIdAsync(string userId)
+    {
+        if (string.IsNullOrWhiteSpace(userId)) return null;
+
+        var users = await GetUsersByIdsAsync(new[] { userId });
+        users.TryGetValue(userId, out var user);
+        return user;
+    }
 }

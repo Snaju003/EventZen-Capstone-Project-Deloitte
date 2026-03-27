@@ -2,12 +2,21 @@ using System.Text.Json;
 
 namespace BookingService.Services;
 
+public class EventVenueDetails
+{
+    public string Name { get; set; } = string.Empty;
+    public string Address { get; set; } = string.Empty;
+}
+
 public class EventDetails
 {
     public string Id { get; set; } = string.Empty;
+    public string Title { get; set; } = string.Empty;
     public string Status { get; set; } = string.Empty;
     public int MaxAttendees { get; set; }
     public DateTime StartTime { get; set; }
+    public double TicketPrice { get; set; }
+    public EventVenueDetails? Venue { get; set; }
 }
 
 public class EventServiceClient
