@@ -3,88 +3,171 @@
 // Auth routes (/api/auth) are NOT behind this middleware — they are public.
 
 const jwt = require("jsonwebtoken");
+const { parseCookieHeader } = require("../utils/cookieParser");
 
 const JWT_SECRET = process.env.JWT_SECRET;
+const AUTH_SERVICE_URL = (process.env.AUTH_SERVICE_URL || "").replace(/\/$/, "");
+const ACCESS_TOKEN_COOKIE_NAME = process.env.ACCESS_TOKEN_COOKIE_NAME || "accessToken";
+
+function normalizeUserPayload(userPayload) {
+  if (!userPayload || typeof userPayload !== "object") {
+    return null;
+  }
+
+  const normalizedId = userPayload._id || userPayload.id || userPayload.sub || null;
+  return {
+    ...userPayload,
+    _id: normalizedId,
+    sub: userPayload.sub || normalizedId,
+  };
+}
+
+async function validateWithAuthService(token, cookieHeader) {
+  if (!AUTH_SERVICE_URL || !token) {
+    return null;
+  }
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 5000);
+
+  try {
+    const endpoints = ["/api/auth/me", "/me"];
+
+    for (const endpoint of endpoints) {
+      const response = await fetch(`${AUTH_SERVICE_URL}${endpoint}`, {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          ...(cookieHeader ? { Cookie: cookieHeader } : {}),
+        },
+        signal: controller.signal,
+      });
+
+      if (!response.ok) {
+        continue;
+      }
+
+      const payload = await response.json().catch(() => null);
+      const user = normalizeUserPayload(payload?.user || payload?.data?.user || payload?.data || payload);
+
+      if (user) {
+        return user;
+      }
+    }
+
+    return null;
+  } catch {
+    return null;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
 
 /**
  * Express middleware that validates a Bearer JWT token.
- * On success, attaches decoded payload to `req.user` and adds
- * `X-User-Id`, `X-User-Email`, and `X-User-Role` headers so
- * downstream services know who the caller is.
+ * On success, attaches decoded payload to `req.user`.
+ * Identity headers are signed and forwarded by proxy route handlers.
  */
-const verifyToken = (req, res, next) => {
-  // Ensure the server has a secret configured
-  if (!JWT_SECRET) {
-    return res.status(500).json({
-      success: false,
-      message: "JWT_SECRET is not configured on the gateway",
-    });
-  }
-
+const verifyToken = async (req, res, next) => {
   const authHeader = req.headers.authorization;
-
-  if (!authHeader) {
-    return res.status(401).json({
-      success: false,
-      message: "Authorization header is missing",
-    });
-  }
-
-  if (!authHeader.startsWith("Bearer ")) {
-    return res.status(401).json({
-      success: false,
-      message: "Authorization header must use Bearer scheme",
-    });
-  }
-
-  const token = authHeader.split(" ")[1];
+  const bearerToken = authHeader?.startsWith("Bearer ")
+    ? authHeader.split(" ")[1]
+    : null;
+  const cookieToken = parseCookieHeader(req.headers.cookie)[ACCESS_TOKEN_COOKIE_NAME] || null;
+  const token = bearerToken || cookieToken;
 
   if (!token || token.trim() === "") {
     return res.status(401).json({
       success: false,
-      message: "Token is missing after Bearer prefix",
+      message: "Authentication token is missing",
     });
   }
 
-  try {
-    const decoded = jwt.verify(token, JWT_SECRET);
+  if (JWT_SECRET) {
+    try {
+      const decoded = jwt.verify(token, JWT_SECRET);
+      req.user = normalizeUserPayload(decoded);
+      return next();
+    } catch (error) {
+      if (error.name === "TokenExpiredError") {
+        return res.status(401).json({
+          success: false,
+          message: "Token has expired",
+        });
+      }
 
-    // Attach decoded payload for downstream use
-    req.user = decoded;
+      if (error.name === "NotBeforeError") {
+        return res.status(401).json({
+          success: false,
+          message: "Token is not yet active",
+        });
+      }
+    }
+  }
 
-    // Forward identity headers to downstream services
-    req.headers["x-user-id"] = decoded._id || decoded.sub;
-    req.headers["x-user-email"] = decoded.email;
-    req.headers["x-user-role"] = decoded.role;
-
+  const userFromAuthService = await validateWithAuthService(token, req.headers.cookie);
+  if (userFromAuthService) {
+    req.user = userFromAuthService;
     return next();
-  } catch (error) {
-    if (error.name === "TokenExpiredError") {
-      return res.status(401).json({
-        success: false,
-        message: "Token has expired",
-      });
-    }
-
-    if (error.name === "JsonWebTokenError") {
-      return res.status(401).json({
-        success: false,
-        message: "Token is invalid",
-      });
-    }
-
-    if (error.name === "NotBeforeError") {
-      return res.status(401).json({
-        success: false,
-        message: "Token is not yet active",
-      });
-    }
-
-    return res.status(401).json({
-      success: false,
-      message: "Authentication failed",
-    });
   }
+
+  return res.status(401).json({
+    success: false,
+    message: "Token is invalid",
+  });
+};
+
+/**
+ * Optional auth middleware.
+ * - If no token is provided, request proceeds as anonymous.
+ * - If token exists and is valid, attaches `req.user`.
+ * - If token exists but is invalid/expired, returns 401.
+ */
+const verifyTokenIfPresent = async (req, res, next) => {
+  const authHeader = req.headers.authorization;
+  const bearerToken = authHeader?.startsWith("Bearer ")
+    ? authHeader.split(" ")[1]
+    : null;
+  const cookieToken = parseCookieHeader(req.headers.cookie)[ACCESS_TOKEN_COOKIE_NAME] || null;
+  const token = bearerToken || cookieToken;
+
+  if (!token || token.trim() === "") {
+    req.user = null;
+    return next();
+  }
+
+  if (JWT_SECRET) {
+    try {
+      const decoded = jwt.verify(token, JWT_SECRET);
+      req.user = normalizeUserPayload(decoded);
+      return next();
+    } catch (error) {
+      if (error.name === "TokenExpiredError") {
+        return res.status(401).json({
+          success: false,
+          message: "Token has expired",
+        });
+      }
+
+      if (error.name === "NotBeforeError") {
+        return res.status(401).json({
+          success: false,
+          message: "Token is not yet active",
+        });
+      }
+    }
+  }
+
+  const userFromAuthService = await validateWithAuthService(token, req.headers.cookie);
+  if (userFromAuthService) {
+    req.user = userFromAuthService;
+    return next();
+  }
+
+  return res.status(401).json({
+    success: false,
+    message: "Token is invalid",
+  });
 };
 
 /**
@@ -92,6 +175,8 @@ const verifyToken = (req, res, next) => {
  * Usage: `authorizeRoles("admin", "organizer")`
  */
 const authorizeRoles = (...allowedRoles) => {
+  const normalizedAllowedRoles = allowedRoles.map((role) => String(role).toLowerCase());
+
   return (req, res, next) => {
     if (!req.user) {
       return res.status(401).json({
@@ -100,7 +185,9 @@ const authorizeRoles = (...allowedRoles) => {
       });
     }
 
-    if (!allowedRoles.includes(req.user.role)) {
+    const requesterRole = String(req.user.role || "").toLowerCase();
+
+    if (!normalizedAllowedRoles.includes(requesterRole)) {
       return res.status(403).json({
         success: false,
         message: `Access denied. Required roles: ${allowedRoles.join(", ")}`,
@@ -111,4 +198,4 @@ const authorizeRoles = (...allowedRoles) => {
   };
 };
 
-module.exports = { verifyToken, authorizeRoles };
+module.exports = { verifyToken, verifyTokenIfPresent, authorizeRoles };
