@@ -8,6 +8,7 @@ import {
   Wallet,
   MoreVertical,
   XCircle,
+  ScanLine,
 } from "lucide-react";
 
 import { ClampedDescription } from "@/components/common/ClampedDescription";
@@ -19,6 +20,17 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { formatINR } from "@/lib/currency";
 
 function getStatusBadge(status) {
@@ -121,16 +133,59 @@ export function AdminEventCard({
                     </DropdownMenuItem>
                   ) : null}
 
-                  <DropdownMenuItem onClick={() => onCancelEvent(event.id)}>
-                    <Ban className="mr-2 h-4 w-4 text-amber-600" />
-                    Cancel
-                  </DropdownMenuItem>
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                        <Ban className="mr-2 h-4 w-4 text-amber-600" />
+                        Cancel
+                      </DropdownMenuItem>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Are you sure you want to cancel this event?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          This will notify attendees and automatically refund any bookings. This action cannot be undone.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Keep Event</AlertDialogCancel>
+                        <AlertDialogAction
+                          onClick={() => onCancelEvent(event.id)}
+                          className="bg-amber-600 hover:bg-amber-700"
+                        >
+                          Cancel Event
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
 
                   {isAdmin ? (
-                    <DropdownMenuItem onClick={() => onDeleteEvent(event.id)} variant="destructive">
-                      <Trash2 className="mr-2 h-4 w-4" />
-                      Delete
-                    </DropdownMenuItem>
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <DropdownMenuItem onSelect={(e) => e.preventDefault()} variant="destructive">
+                          <Trash2 className="mr-2 h-4 w-4" />
+                          Delete
+                        </DropdownMenuItem>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            This will permanently delete the event "{event.title || 'Untitled'}". 
+                            All associated data will be removed from the system.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogAction
+                            onClick={() => onDeleteEvent(event.id)}
+                            className="bg-red-600 hover:bg-red-700 focus:ring-red-500"
+                          >
+                            Delete Event
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
                   ) : null}
 
                   <DropdownMenuSeparator />
@@ -146,6 +201,13 @@ export function AdminEventCard({
                     <Wallet className="mr-2 h-4 w-4" />
                     Budget
                   </DropdownMenuItem>
+
+                  {!isAdmin && normalizedStatus === "published" ? (
+                    <DropdownMenuItem onClick={() => navigate(`/vendor/check-in/${event.id}`)}>
+                      <ScanLine className="mr-2 h-4 w-4" />
+                      Check-In
+                    </DropdownMenuItem>
+                  ) : null}
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>
@@ -229,14 +291,35 @@ export function AdminEventCard({
                   Approved
                 </span>
               ) : null}
-              <button
-                type="button"
-                onClick={() => onRemoveVendor(event.id, assigned.vendorId)}
-                aria-label={`Remove vendor ${vendorMap.get(assigned.vendorId)?.name || assigned.vendorId} from ${event.title || "event"}`}
-                className="text-red-800"
-              >
-                Remove
-              </button>
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <button
+                    type="button"
+                    aria-label={`Remove vendor ${vendorMap.get(assigned.vendorId)?.name || assigned.vendorId} from ${event.title || "event"}`}
+                    className="text-red-800 hover:underline"
+                  >
+                    Remove
+                  </button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Remove Vendor</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      Are you sure you want to remove {vendorMap.get(assigned.vendorId)?.name || "this vendor"} from the event? 
+                      This will delete their assignment and agreed budget cost.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction
+                      onClick={() => onRemoveVendor(event.id, assigned.vendorId)}
+                      className="bg-red-600 hover:bg-red-700"
+                    >
+                      Remove
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
             </span>
           ))}
         </div>

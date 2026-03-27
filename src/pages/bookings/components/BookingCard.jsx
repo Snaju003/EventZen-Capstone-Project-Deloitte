@@ -2,6 +2,17 @@ import { Calendar, MapPin, Ticket, Users, XCircle } from "lucide-react";
 import { motion } from "framer-motion";
 
 import { ImageCarousel } from "@/components/ui/ImageCarousel";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { cardEnter } from "@/lib/animations";
 
 export function BookingCard({ booking, isCancelling, onCancel, onViewTicket, index = 0 }) {
@@ -56,14 +67,35 @@ export function BookingCard({ booking, isCancelling, onCancel, onViewTicket, ind
                   <Ticket className="h-4 w-4" />
                   View Ticket
                 </button>
-                <button
-                  className="flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-bold text-red-800 transition-colors hover:bg-red-100 disabled:opacity-60"
-                  onClick={() => onCancel(booking.id)}
-                  disabled={isCancelling}
-                >
-                  <XCircle className="w-4 h-4" />
-                  {isCancelling ? "Cancelling..." : "Cancel Booking"}
-                </button>
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <button
+                      className="flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-bold text-red-800 transition-colors hover:bg-red-100 disabled:opacity-60"
+                      disabled={isCancelling}
+                    >
+                      <XCircle className="w-4 h-4" />
+                      {isCancelling ? "Cancelling..." : "Cancel Booking"}
+                    </button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Cancel your booking?</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        Are you sure you want to cancel your booking for "{booking.title}"? This will free up your seats.
+                        This action cannot be undone.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Keep Booking</AlertDialogCancel>
+                      <AlertDialogAction
+                        onClick={() => onCancel(booking.id)}
+                        className="bg-red-600 hover:bg-red-700"
+                      >
+                        Yes, Cancel
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
               </div>
             ) : (
               <p className="text-sm text-slate-500 italic">

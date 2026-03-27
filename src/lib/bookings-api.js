@@ -47,3 +47,8 @@ export async function adminCancelBooking(bookingId) {
   const response = await apiClient.delete(`/bookings/${bookingId}/admin`);
   return response?.data || {};
 }
+
+export async function checkInBooking({ bookingId, eventId }) {
+  const response = await apiClient.post("/bookings/check-in", { bookingId, eventId });
+  return response?.data || {};
+}

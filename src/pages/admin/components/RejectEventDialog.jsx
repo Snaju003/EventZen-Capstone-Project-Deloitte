@@ -1,11 +1,11 @@
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 export function RejectEventDialog({
   open,
@@ -17,14 +17,14 @@ export function RejectEventDialog({
   isSubmitting,
 }) {
   return (
-    <Dialog open={open} onOpenChange={(nextOpen) => !nextOpen && onCancel()}>
-      <DialogContent className="sm:max-w-lg">
-        <DialogHeader>
-          <DialogTitle>Reject Event Request</DialogTitle>
-          <DialogDescription>
+    <AlertDialog open={open} onOpenChange={(nextOpen) => !nextOpen && onCancel()}>
+      <AlertDialogContent className="sm:max-w-lg">
+        <AlertDialogHeader>
+          <AlertDialogTitle>Reject Event Request</AlertDialogTitle>
+          <AlertDialogDescription>
             Share a clear reason so the vendor knows what to update before resubmitting.
-          </DialogDescription>
-        </DialogHeader>
+          </AlertDialogDescription>
+        </AlertDialogHeader>
 
         <div className="space-y-3">
           <p className="text-sm font-medium text-slate-700">
@@ -44,7 +44,7 @@ export function RejectEventDialog({
           <p className="text-xs text-slate-500">{reason.trim().length}/500 characters</p>
         </div>
 
-        <DialogFooter className="-mx-0 -mb-0 border-t-0 bg-transparent p-0 pt-2">
+        <AlertDialogFooter className="-mx-0 -mb-0 border-t-0 bg-transparent p-0 pt-2">
           <button
             type="button"
             onClick={onCancel}
@@ -61,8 +61,8 @@ export function RejectEventDialog({
           >
             {isSubmitting ? "Rejecting..." : "Reject Event"}
           </button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   );
 }
