@@ -20,7 +20,7 @@ export function CalendarPopover({
 }) {
   return (
     <div
-      className="absolute z-50 mt-1.5 w-72 rounded-xl border border-slate-200 bg-white p-3 shadow-lg shadow-slate-900/8"
+      className="absolute z-[120] mt-1.5 w-72 rounded-xl border border-slate-200 bg-white p-3 shadow-lg shadow-slate-900/8"
       style={{ animation: "calendarIn 0.18s ease-out" }}
     >
       <div className="mb-2 flex items-center justify-between">

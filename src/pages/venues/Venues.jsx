@@ -2,6 +2,8 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Building2, MapPin, Search, Users } from "lucide-react";
 import { motion } from "framer-motion";
 
+import { ClampedDescription } from "@/components/common/ClampedDescription";
+import { VenueDescriptionDialog } from "@/components/common/VenueDescriptionDialog";
 import { ImageCarousel } from "@/components/ui/ImageCarousel";
 import { SkeletonCardGrid } from "@/components/ui/SkeletonCard";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -15,6 +17,7 @@ export default function Venues() {
     const [search, setSearch] = useState("");
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState("");
+    const [activeVenueDescription, setActiveVenueDescription] = useState(null);
 
     const loadVenues = useCallback(async () => {
         setIsLoading(true);
@@ -137,12 +140,29 @@ export default function Venues() {
                                     <Users className="h-4 w-4" />
                                     Capacity {venue.capacity || 0}
                                 </div>
-                                <p className="text-sm text-slate-600">{venue.description || "No venue description available."}</p>
+                                <ClampedDescription
+                                    text={venue.description}
+                                    className="text-sm text-slate-600"
+                                    actionLabel="Show more"
+                                    onAction={() => setActiveVenueDescription(venue)}
+                                />
                             </motion.article>
                         ))}
                     </motion.div>
                 )}
             </main>
+            <VenueDescriptionDialog
+                isOpen={Boolean(activeVenueDescription)}
+                onOpenChange={(open) => {
+                    if (!open) {
+                        setActiveVenueDescription(null);
+                    }
+                }}
+                name={activeVenueDescription?.name}
+                address={activeVenueDescription?.address}
+                capacity={activeVenueDescription?.capacity}
+                description={activeVenueDescription?.description}
+            />
             <Footer />
         </div>
     );

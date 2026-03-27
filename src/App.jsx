@@ -5,6 +5,7 @@ import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { AdminRoute, RoleRoute } from "@/components/auth/AdminRoute";
 import { Navbar } from "@/components/layout/Navbar";
 import { RouteLoadingFallback } from "@/components/ui/RouteLoadingFallback";
+import { pageTransition } from "@/lib/animations";
 
 const AuthPage = lazy(() => import("@/pages/auth/AuthPage"));
 const LandingPage = lazy(() => import("@/pages/landing/LandingPage"));
@@ -36,10 +37,10 @@ function App() {
           <motion.div
             key={`${location.pathname}${location.search}`}
             className={isLandingRoute ? "" : "pt-24 sm:pt-28"}
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -6 }}
-            transition={{ duration: 0.24, ease: "easeOut" }}
+            initial={pageTransition.initial}
+            animate={pageTransition.animate}
+            exit={pageTransition.exit}
+            transition={pageTransition.transition}
           >
             <Routes location={location}>
               <Route path='/' element={<LandingPage />} />

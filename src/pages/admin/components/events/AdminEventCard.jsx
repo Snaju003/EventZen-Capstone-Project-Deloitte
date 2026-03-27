@@ -1,5 +1,6 @@
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 
+import { ClampedDescription } from "@/components/common/ClampedDescription";
 import { ImageCarousel } from "@/components/ui/ImageCarousel";
 import { formatINR } from "@/lib/currency";
 
@@ -48,6 +49,7 @@ export function AdminEventCard({
   vendorMap,
   vendors,
 }) {
+  const navigate = useNavigate();
   const normalizedStatus = (event.status || "draft").toLowerCase();
   const { label: statusBadgeLabel, className: statusBadgeClass } = getStatusBadge(normalizedStatus);
 
@@ -70,7 +72,14 @@ export function AdminEventCard({
               {statusBadgeLabel}
             </span>
           </div>
-          <p className="mt-1 text-sm text-slate-600">{event.description || "No description"}</p>
+          <div className="mt-1">
+            <ClampedDescription
+              text={event.description || "No description"}
+              className="text-sm text-slate-600"
+              actionLabel="Show more"
+              onAction={() => navigate(`/events/${event.id}`)}
+            />
+          </div>
           <p className="mt-2 text-xs text-slate-500">
             Venue: {venueMap.get(event.venueId)?.name || "Unknown"}
           </p>

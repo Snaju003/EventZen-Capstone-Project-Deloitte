@@ -4,6 +4,8 @@ const currencyFormatter = new Intl.NumberFormat("en-IN", {
   minimumFractionDigits: 2,
 });
 
+const CONVENIENCE_FEE_PERCENT = 5;
+
 export function formatDateTime(value) {
   if (!value) return "Date unavailable";
   const parsed = new Date(value);
@@ -22,7 +24,9 @@ export function toBookingViewModel(booking, event, venue) {
   const status = (booking.status || "").toUpperCase();
   const ticketPrice = Number(event?.ticketPrice ?? 0);
   const seatCount = Number(booking.seatCount ?? 0);
-  const total = ticketPrice * seatCount;
+  const baseAmount = ticketPrice * seatCount;
+  const convenienceFee = baseAmount * (CONVENIENCE_FEE_PERCENT / 100);
+  const total = baseAmount + convenienceFee;
   const startTime = event?.startTime ? new Date(event.startTime) : null;
   const isMissingEvent = !event;
   const isConcluded =
@@ -48,6 +52,8 @@ export function toBookingViewModel(booking, event, venue) {
     location: venue?.address || "Venue details unavailable",
     seats: `${seatCount} seat${seatCount === 1 ? "" : "s"}`,
     price: currencyFormatter.format(total),
+    ticketPrice: currencyFormatter.format(baseAmount),
+    convenienceFee: currencyFormatter.format(convenienceFee),
     imageUrls: (
       Array.isArray(event?.imageUrls) && event.imageUrls.length
         ? event.imageUrls

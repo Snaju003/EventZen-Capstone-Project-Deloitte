@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Eye, EyeOff, Lock } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { motion } from 'framer-motion';
 import { getApiErrorMessage } from '@/lib/auth-api';
 
 export function ChangePasswordForm({ isLoading, onSubmit }) {
@@ -36,7 +37,12 @@ export function ChangePasswordForm({ isLoading, onSubmit }) {
     };
 
     return (
-        <div className="flex w-full flex-1 flex-col rounded-2xl border border-slate-100 bg-slate-50/60 p-3">
+        <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3, ease: "easeOut", delay: 0.05 }}
+            className="flex w-full flex-1 flex-col rounded-2xl border border-slate-100 bg-slate-50/60 p-3"
+        >
             <div className="mb-3 flex items-center gap-2">
                 <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-50 text-emerald-600">
                     <Lock className="h-4 w-4" />
@@ -58,14 +64,15 @@ export function ChangePasswordForm({ isLoading, onSubmit }) {
                             placeholder="••••••••"
                             className="h-11 w-full rounded-xl border border-slate-200 bg-white px-3.5 pr-10 text-sm font-medium text-slate-900 outline-none transition-all placeholder:text-slate-400 focus:border-primary focus:ring-1 focus:ring-primary"
                         />
-                        <button
+                        <motion.button
                             type="button"
                             onClick={() => setShowCurrentPassword((previous) => !previous)}
                             className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1 text-slate-500 hover:bg-slate-100"
                             aria-label={showCurrentPassword ? 'Hide password' : 'Show password'}
+                            whileTap={{ scale: 0.9 }}
                         >
                             {showCurrentPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                        </button>
+                        </motion.button>
                     </div>
                 </div>
 
@@ -79,14 +86,15 @@ export function ChangePasswordForm({ isLoading, onSubmit }) {
                             placeholder="••••••••"
                             className="h-11 w-full rounded-xl border border-slate-200 bg-white px-3.5 pr-10 text-sm font-medium text-slate-900 outline-none transition-all placeholder:text-slate-400 focus:border-primary focus:ring-1 focus:ring-primary"
                         />
-                        <button
+                        <motion.button
                             type="button"
                             onClick={() => setShowNewPassword((previous) => !previous)}
                             className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1 text-slate-500 hover:bg-slate-100"
                             aria-label={showNewPassword ? 'Hide password' : 'Show password'}
+                            whileTap={{ scale: 0.9 }}
                         >
                             {showNewPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                        </button>
+                        </motion.button>
                     </div>
                 </div>
 
@@ -100,27 +108,30 @@ export function ChangePasswordForm({ isLoading, onSubmit }) {
                             placeholder="••••••••"
                             className="h-11 w-full rounded-xl border border-slate-200 bg-white px-3.5 pr-10 text-sm font-medium text-slate-900 outline-none transition-all placeholder:text-slate-400 focus:border-primary focus:ring-1 focus:ring-primary"
                         />
-                        <button
+                        <motion.button
                             type="button"
                             onClick={() => setShowConfirmPassword((previous) => !previous)}
                             className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1 text-slate-500 hover:bg-slate-100"
                             aria-label={showConfirmPassword ? 'Hide password' : 'Show password'}
+                            whileTap={{ scale: 0.9 }}
                         >
                             {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                        </button>
+                        </motion.button>
                     </div>
                 </div>
 
                 <div className="flex justify-end pt-1 md:col-span-2">
-                    <button
+                    <motion.button
                         type="submit"
                         disabled={isLoading}
                         className="h-10 rounded-xl bg-primary px-5 text-sm font-bold text-white shadow-sm transition-all hover:opacity-90 disabled:opacity-60 active:scale-95"
+                        whileTap={{ scale: 0.98 }}
+                        whileHover={{ y: -1 }}
                     >
                         {isLoading ? 'Saving…' : 'Save Password'}
-                    </button>
+                    </motion.button>
                 </div>
             </form>
-        </div>
+        </motion.div>
     );
 }

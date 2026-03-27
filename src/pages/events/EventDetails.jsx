@@ -26,9 +26,11 @@ export default function EventDetails() {
     isLoading,
     loadEvent,
     maxAttendees,
+    paymentBreakdown,
     seatCount,
     seatPercentage,
     setSeatCount,
+    maxTicketsPerBooking,
   } = useEventDetailsPage(id, navigate);
 
   return (
@@ -82,7 +84,9 @@ export default function EventDetails() {
               isAuthenticated={isAuthenticated}
               isBooking={isBooking}
               maxAttendees={maxAttendees}
+              maxTicketsPerBooking={maxTicketsPerBooking}
               nonBookReason={getCannotBookMessage}
+              paymentBreakdown={paymentBreakdown}
               seatCount={seatCount}
               seatPercentage={seatPercentage}
               setSeatCount={setSeatCount}

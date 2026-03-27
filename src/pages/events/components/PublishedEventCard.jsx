@@ -1,13 +1,15 @@
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Calendar, MapPin, Ticket } from "lucide-react";
 import { motion } from "framer-motion";
 
+import { ClampedDescription } from "@/components/common/ClampedDescription";
 import { ImageCarousel } from "@/components/ui/ImageCarousel";
 import { formatINR } from "@/lib/currency";
 import { cardEnter } from "@/lib/animations";
 import { formatEventsPageDateTime } from "@/pages/events/utils/eventsPage.utils";
 
 export function PublishedEventCard({ event, index, venue }) {
+  const navigate = useNavigate();
   const eventImages = Array.isArray(event.imageUrls) && event.imageUrls.length
     ? event.imageUrls
     : venue?.imageUrls;
@@ -27,7 +29,14 @@ export function PublishedEventCard({ event, index, venue }) {
         <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold capitalize text-primary">{event.status || "draft"}</span>
       </div>
 
-      <p className="mb-4 text-sm text-slate-600">{event.description || "No description available."}</p>
+      <div className="mb-4">
+        <ClampedDescription
+          text={event.description}
+          className="text-sm text-slate-600"
+          actionLabel="Show more"
+          onAction={() => navigate(`/events/${event.id}`)}
+        />
+      </div>
       <div className="space-y-2 text-sm text-slate-600">
         <p className="flex items-center gap-2"><Calendar className="h-4 w-4" /> {formatEventsPageDateTime(event.startTime)}</p>
         <p className="flex items-center gap-2"><MapPin className="h-4 w-4" /> {venue?.name || "Venue unavailable"} - {venue?.address || ""}</p>

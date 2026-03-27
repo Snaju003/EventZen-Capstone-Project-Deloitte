@@ -53,7 +53,7 @@ export function BookingTicketDialog({
             </div>
 
             {ticketQrCodeUrl ? (
-              <div className="flex flex-wrap justify-end gap-2">
+              <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
                 <button
                   type="button"
                   onClick={onDownloadPng}

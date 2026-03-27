@@ -8,6 +8,9 @@ import { getEventById, getVenues } from "@/lib/events-api";
 import { createPaymentOrder, verifyPayment } from "@/lib/payments-api";
 import { openRazorpayCheckout } from "@/lib/razorpay-checkout";
 
+const CONVENIENCE_FEE_PERCENT = 5;
+const MAX_TICKETS_PER_BOOKING = 10;
+
 export function getCannotBookMessage(event, isAuthenticated, availableSeats) {
   if (!isAuthenticated) {
     return "Please log in before booking and payment.";
@@ -78,6 +81,28 @@ export function useEventDetailsPage(id, navigate) {
     [availableSeats, event?.status, isAuthenticated, user?.role],
   );
 
+  const paymentBreakdown = useMemo(() => {
+    const ticketPrice = Number(event?.ticketPrice || 0);
+    const parsedSeats = Number(seatCount) || 0;
+
+    if (!ticketPrice || parsedSeats < 1) {
+      return null;
+    }
+
+    const baseAmount = ticketPrice * parsedSeats;
+    const convenienceFee = baseAmount * (CONVENIENCE_FEE_PERCENT / 100);
+    const totalAmount = baseAmount + convenienceFee;
+
+    return {
+      ticketPrice,
+      baseAmount,
+      convenienceFee,
+      convenienceFeePercent: CONVENIENCE_FEE_PERCENT,
+      totalAmount,
+      seatCount: parsedSeats,
+    };
+  }, [event?.ticketPrice, seatCount]);
+
   const handleBook = async (submitEvent) => {
     submitEvent.preventDefault();
     if (!id) return;
@@ -85,6 +110,11 @@ export function useEventDetailsPage(id, navigate) {
     const parsedSeats = Number(seatCount);
     if (!Number.isFinite(parsedSeats) || parsedSeats < 1) {
       toast.error("Please enter a valid seat count.");
+      return;
+    }
+
+    if (parsedSeats > MAX_TICKETS_PER_BOOKING) {
+      toast.error(`You can book up to ${MAX_TICKETS_PER_BOOKING} tickets per transaction.`);
       return;
     }
 
@@ -139,9 +169,11 @@ export function useEventDetailsPage(id, navigate) {
     isLoading,
     loadEvent,
     maxAttendees,
+    paymentBreakdown,
     seatCount,
     seatPercentage,
     setSeatCount,
     user,
+    maxTicketsPerBooking: MAX_TICKETS_PER_BOOKING,
   };
 }

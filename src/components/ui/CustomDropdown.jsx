@@ -91,7 +91,7 @@ export default function CustomDropdown({
             {isOpen && (
                 <ul
                     role="listbox"
-                    className="absolute z-50 mt-1.5 max-h-56 w-full overflow-auto rounded-xl border border-slate-200 bg-white py-1 shadow-lg shadow-slate-900/8 animate-in fade-in slide-in-from-top-1"
+                    className="absolute z-[120] mt-1.5 max-h-56 w-full overflow-auto rounded-xl border border-slate-200 bg-white py-1 shadow-lg shadow-slate-900/8 animate-in fade-in slide-in-from-top-1"
                     style={{ animation: "dropdownIn 0.15s ease-out" }}
                 >
                     {options.map((option) => {

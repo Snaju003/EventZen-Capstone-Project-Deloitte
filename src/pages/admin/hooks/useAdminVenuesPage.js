@@ -15,6 +15,7 @@ export function useAdminVenuesPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isUploadingImages, setIsUploadingImages] = useState(false);
   const [deletingVenueId, setDeletingVenueId] = useState("");
+  const [selectedVenueForDescription, setSelectedVenueForDescription] = useState(null);
 
   const loadVenues = useCallback(async () => {
     setIsLoading(true);
@@ -66,13 +67,26 @@ export function useAdminVenuesPage() {
       return;
     }
 
+    if (isUploadingImages) {
+      toast.error("Please wait for images to finish uploading.");
+      return;
+    }
+
     setIsSubmitting(true);
 
     const payload = {
-      ...form,
+      name: String(form.name || "").trim(),
+      address: String(form.address || "").trim(),
+      description: String(form.description || "").trim(),
       capacity: Number(form.capacity),
       imageUrls: form.imageUrls,
     };
+
+    if (!payload.name || !Number.isFinite(payload.capacity) || payload.capacity < 1) {
+      toast.error("Please enter a valid venue name and capacity.");
+      setIsSubmitting(false);
+      return;
+    }
 
     try {
       if (editingId) {
@@ -92,8 +106,7 @@ export function useAdminVenuesPage() {
     }
   };
 
-  const handleImageUpload = async (inputEvent) => {
-    const files = inputEvent.target.files;
+  const uploadVenueImages = async (files) => {
     if (!files?.length) return;
 
     setIsUploadingImages(true);
@@ -111,9 +124,17 @@ export function useAdminVenuesPage() {
     } catch (error) {
       toast.error(getApiErrorMessage(error, "Failed to upload venue images."));
     } finally {
-      inputEvent.target.value = "";
       setIsUploadingImages(false);
     }
+  };
+
+  const handleImageUpload = async (inputEvent) => {
+    await uploadVenueImages(inputEvent.target.files);
+    inputEvent.target.value = "";
+  };
+
+  const handleImageDrop = async (files) => {
+    await uploadVenueImages(files);
   };
 
   const removeImageAtIndex = (indexToRemove) => {
@@ -145,6 +166,7 @@ export function useAdminVenuesPage() {
     deletingVenueId,
     editingId,
     form,
+    handleImageDrop,
     handleImageUpload,
     isFormDialogOpen,
     isLoading,
@@ -155,7 +177,9 @@ export function useAdminVenuesPage() {
     removeVenue,
     resetForm,
     setForm,
+    setSelectedVenueForDescription,
     setIsFormDialogOpen,
+    selectedVenueForDescription,
     startEdit,
     submitVenue,
     venues,

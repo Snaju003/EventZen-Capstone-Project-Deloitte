@@ -9,3 +9,8 @@ export async function verifyPayment(payload) {
   const response = await apiClient.post("/payments/verify", payload);
   return response?.data || null;
 }
+
+export async function getConvenienceFeeRevenueSummary() {
+  const response = await apiClient.get("/payments/revenue/summary");
+  return response?.data || null;
+}

@@ -1,5 +1,6 @@
 import { useRef } from 'react';
 import { Camera, Pencil } from 'lucide-react';
+import { motion } from 'framer-motion';
 
 export function ProfileHeroCard({ user, onAvatarChange, isLoading, statLabel, statValue, showStat }) {
     const fileInputRef = useRef(null);
@@ -15,7 +16,12 @@ export function ProfileHeroCard({ user, onAvatarChange, isLoading, statLabel, st
     const triggerFilePicker = () => fileInputRef.current?.click();
 
     return (
-        <div className="flex items-center gap-4 rounded-2xl border border-slate-100 bg-white p-4 shadow-sm">
+        <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.35, ease: "easeOut" }}
+            className="flex items-center gap-4 rounded-2xl border border-slate-100 bg-white p-4 shadow-sm"
+        >
             {/* Avatar */}
             <div className="flex flex-col items-center gap-1 shrink-0">
                 <div className="relative">
@@ -23,22 +29,24 @@ export function ProfileHeroCard({ user, onAvatarChange, isLoading, statLabel, st
                         className="h-16 w-16 rounded-full border-2 border-white bg-slate-100 bg-cover bg-center bg-no-repeat shadow-md ring-2 ring-primary/10"
                         style={user?.avatar ? { backgroundImage: `url("${user.avatar}")` } : {}}
                     />
-                    <button
+                    <motion.button
                         onClick={triggerFilePicker}
                         disabled={isLoading}
                         className="absolute -bottom-0.5 -right-0.5 rounded-full bg-primary p-1.5 text-white shadow-lg transition-colors hover:opacity-90 disabled:opacity-60"
+                        whileTap={{ scale: 0.92 }}
                     >
                         <Camera className="h-3 w-3" />
-                    </button>
+                    </motion.button>
                 </div>
-                <button
+                <motion.button
                     onClick={triggerFilePicker}
                     disabled={isLoading}
                     className="flex items-center gap-0.5 text-[10px] font-semibold text-slate-500 transition-colors hover:text-primary disabled:opacity-60"
+                    whileTap={{ scale: 0.98 }}
                 >
                     <Pencil className="h-2.5 w-2.5" />
                     {isLoading ? 'Uploading…' : 'Edit'}
-                </button>
+                </motion.button>
                 <input
                     ref={fileInputRef}
                     type="file"
@@ -57,11 +65,16 @@ export function ProfileHeroCard({ user, onAvatarChange, isLoading, statLabel, st
 
             {/* Stat */}
             {showStat ? (
-                <div className="shrink-0 flex flex-col items-center gap-0.5 rounded-xl border border-slate-100 bg-gradient-to-br from-slate-50 to-slate-100/80 px-4 py-2.5 text-center">
+                <motion.div
+                    initial={{ opacity: 0, scale: 0.94 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ duration: 0.3, delay: 0.1, ease: "easeOut" }}
+                    className="shrink-0 flex flex-col items-center gap-0.5 rounded-xl border border-slate-100 bg-gradient-to-br from-slate-50 to-slate-100/80 px-4 py-2.5 text-center"
+                >
                     <p className="text-2xl font-bold text-slate-800">{statValue ?? 0}</p>
                     <p className="text-[9px] font-bold uppercase tracking-wider text-slate-500">{statLabel}</p>
-                </div>
+                </motion.div>
             ) : null}
-        </div>
+        </motion.div>
     );
 }

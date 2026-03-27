@@ -8,8 +8,9 @@ import { ProfileHeroCard } from './components/ProfileHeroCard';
 import { PersonalInfoForm } from './components/PersonalInfoForm';
 import { ChangePasswordForm } from './components/ChangePasswordForm';
 import { Footer } from '@/components/layout/Footer';
-import { getApiErrorMessage, authApi, extractPayload, getMessage } from '@/lib/auth-api';
+import { authApi, getMessage } from '@/lib/auth-api';
 import { getMyBookings } from '@/lib/bookings-api';
+import { getEvents } from '@/lib/events-api';
 import { useAuth } from '@/hooks/useAuth';
 import { staggerContainer, fadeUp } from '@/lib/animations';
 
@@ -18,25 +19,45 @@ export default function Profile() {
     const { user: authUser, fetchMe, updateMe, uploadAvatar: contextUploadAvatar, requestEmailChangeOtp, verifyEmailChangeOtp, logout } = useAuth();
     const [user, setUser] = useState(authUser);
     const [bookingCount, setBookingCount] = useState(0);
+    const [vendorEventCount, setVendorEventCount] = useState(0);
     const [isLoading, setIsLoading] = useState(false);
     const [isUploading, setIsUploading] = useState(false);
 
     const loadProfile = useCallback(async () => {
         setIsLoading(true);
         try {
-            const [profileData, bookings] = await Promise.all([
-                fetchMe(),
-                getMyBookings().catch(() => []),
-            ]);
+            const profileData = await fetchMe();
+            const normalizedRole = String(profileData?.role || "").toLowerCase();
+
+            let nextBookingCount = 0;
+            let nextVendorEventCount = 0;
+
+            if (normalizedRole === "customer") {
+                const bookings = await getMyBookings().catch(() => []);
+                nextBookingCount = Array.isArray(bookings) ? bookings.length : 0;
+            }
+
+            if (normalizedRole === "vendor") {
+                const events = await getEvents().catch(() => []);
+                nextVendorEventCount = Array.isArray(events)
+                    ? events.filter((event) => !profileData?.id || event?.createdBy === profileData.id).length || events.length
+                    : 0;
+            }
 
             setUser(profileData);
-            setBookingCount(Array.isArray(bookings) ? bookings.length : 0);
+            setBookingCount(nextBookingCount);
+            setVendorEventCount(nextVendorEventCount);
         } catch {
             toast.error('Unable to load your profile right now.');
         } finally {
             setIsLoading(false);
         }
     }, [fetchMe]);
+
+    const normalizedUserRole = String(user?.role || "").toLowerCase();
+    const shouldShowProfileStat = normalizedUserRole !== "admin";
+    const profileStatLabel = normalizedUserRole === "vendor" ? "My Events" : "My Bookings";
+    const profileStatValue = normalizedUserRole === "vendor" ? vendorEventCount : bookingCount;
 
     useEffect(() => {
         loadProfile();
@@ -110,14 +131,14 @@ export default function Profile() {
                     </div>
 
                     {/* Right: compact identity card */}
-                    <ProfileHeroCard
-                        user={user}
-                        onAvatarChange={handleAvatarChange}
-                        isLoading={isUploading}
-                        showStat
-                        statLabel="My Bookings"
-                        statValue={bookingCount}
-                    />
+                        <ProfileHeroCard
+                            user={user}
+                            onAvatarChange={handleAvatarChange}
+                            isLoading={isUploading}
+                            showStat={shouldShowProfileStat}
+                            statLabel={profileStatLabel}
+                            statValue={profileStatValue}
+                        />
                 </motion.div>
 
                 {/* Two-column form layout */}

@@ -7,12 +7,14 @@ import { Footer } from "@/components/layout/Footer";
 import { SkeletonCardGrid } from "@/components/ui/SkeletonCard";
 import { useAuth } from "@/hooks/useAuth";
 import { BookingsTableSection } from "@/pages/admin/components/dashboard/BookingsTableSection";
+import { ConvenienceFeeRevenueCard } from "@/pages/admin/components/dashboard/ConvenienceFeeRevenueCard";
 import { DashboardSectionTabs } from "@/pages/admin/components/dashboard/DashboardSectionTabs";
 import { DashboardSummaryCard } from "@/pages/admin/components/dashboard/DashboardSummaryCard";
 import { EventsTableSection } from "@/pages/admin/components/dashboard/EventsTableSection";
 import { VenuesGridSection } from "@/pages/admin/components/dashboard/VenuesGridSection";
 import { VendorsTableSection } from "@/pages/admin/components/dashboard/VendorsTableSection";
 import { useAdminDashboardData } from "@/pages/admin/hooks/useAdminDashboardData";
+import { staggerContainer } from "@/lib/animations";
 
 export default function AdminDashboard() {
   const { user } = useAuth();
@@ -64,14 +66,16 @@ export default function AdminDashboard() {
             </p>
           </div>
 
-          <button
+          <motion.button
             type="button"
             onClick={() => loadDashboardData({ force: true })}
             className="button-polish focus-polish inline-flex items-center justify-center gap-2 border border-slate-200 bg-white px-4 py-2 text-sm text-slate-700 hover:bg-slate-50"
+            whileHover={{ y: -1 }}
+            whileTap={{ scale: 0.98 }}
           >
             <RefreshCw className="h-4 w-4" />
             Refresh
-          </button>
+          </motion.button>
         </motion.div>
 
         <motion.section
@@ -107,12 +111,18 @@ export default function AdminDashboard() {
           </div>
         ) : null}
 
-        <div className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-          <DashboardSummaryCard title="Total Events" value={events.length} helper={`${statusCounts.published} published`} delay={0} />
-          <DashboardSummaryCard title="Total Bookings" value={totalConfirmedSeats} helper="Confirmed seats" delay={0.08} />
-          <DashboardSummaryCard title="Total Venues" value={venues.length} helper="Registered venues" delay={0.16} />
-          <DashboardSummaryCard title="Total Vendors" value={vendors.length} helper="Active vendor partners" delay={0.24} />
-        </div>
+        <motion.div
+          className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4"
+          variants={staggerContainer(0.06, 0.02)}
+          initial="hidden"
+          animate="show"
+        >
+          <DashboardSummaryCard title="Total Events" value={events.length} helper={`${statusCounts.published} published`} index={0} />
+          <DashboardSummaryCard title="Total Bookings" value={totalConfirmedSeats} helper="Confirmed seats" index={1} />
+          <DashboardSummaryCard title="Total Venues" value={venues.length} helper="Registered venues" index={2} />
+          <DashboardSummaryCard title="Total Vendors" value={vendors.length} helper="Active vendor partners" index={3} />
+          <ConvenienceFeeRevenueCard isAdmin={isAdmin} />
+        </motion.div>
 
         {isLoading ? <SkeletonCardGrid count={2} columns="md:grid-cols-2" /> : null}
 

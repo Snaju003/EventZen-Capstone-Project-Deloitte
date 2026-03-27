@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { IdCard } from 'lucide-react';
 import { getApiErrorMessage } from '@/lib/auth-api';
 import toast from 'react-hot-toast';
+import { motion } from 'framer-motion';
 import { EmailOtpDialog } from './EmailOtpDialog';
 
 export function PersonalInfoForm({ user, isLoading, onSubmit, onRequestEmailChangeOtp, onVerifyEmailChangeOtp }) {
@@ -130,7 +131,12 @@ export function PersonalInfoForm({ user, isLoading, onSubmit, onRequestEmailChan
     };
 
     return (
-        <div className="flex w-full flex-1 flex-col rounded-2xl border border-slate-100 bg-slate-50/60 p-3">
+        <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3, ease: "easeOut" }}
+            className="flex w-full flex-1 flex-col rounded-2xl border border-slate-100 bg-slate-50/60 p-3"
+        >
             <div className="mb-3 flex items-center justify-between gap-2">
                 <div className="flex items-center gap-2">
                 <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 text-primary">
@@ -179,37 +185,41 @@ export function PersonalInfoForm({ user, isLoading, onSubmit, onRequestEmailChan
                         Email change requires OTP verification.
                     </p>
                     <div className="flex flex-wrap items-center gap-2 pt-0.5">
-                            <button
+                            <motion.button
                                 type="button"
                                 onClick={handleRequestEmailOtp}
                                 disabled={isLoading || !isEmailChanged || (otpMatchesCurrentEmail && resendSecondsLeft > 0)}
                                 className="h-9 rounded-lg border border-slate-200 bg-white px-3.5 text-xs font-semibold text-slate-700 transition-colors hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60"
+                                whileTap={{ scale: 0.97 }}
                             >
                                 {otpMatchesCurrentEmail && resendSecondsLeft > 0
                                     ? `Resend in ${resendSecondsLeft}s`
                                     : otpMatchesCurrentEmail
                                         ? 'Resend OTP'
                                         : 'Send OTP'}
-                            </button>
+                            </motion.button>
                     </div>
                 </div>
 
                 <div className="flex justify-end pt-1">
-                    <button
+                    <motion.button
                         type="button"
                         onClick={handleResetChanges}
                         disabled={isLoading || !hasPendingChanges}
                         className="mr-2 h-10 rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-600 transition-all hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60"
+                        whileTap={{ scale: 0.98 }}
                     >
                         Reset
-                    </button>
-                    <button
+                    </motion.button>
+                    <motion.button
                         type="submit"
                         disabled={isLoading || !isNameChanged}
                         className="h-10 rounded-xl bg-primary px-5 text-sm font-bold text-white shadow-sm transition-all hover:opacity-90 disabled:opacity-60 active:scale-95"
+                        whileTap={{ scale: 0.98 }}
+                        whileHover={{ y: -1 }}
                     >
                         {isLoading ? 'Saving…' : 'Save Changes'}
-                    </button>
+                    </motion.button>
                 </div>
             </form>
 
@@ -232,6 +242,6 @@ export function PersonalInfoForm({ user, isLoading, onSubmit, onRequestEmailChan
                 otpRequestedForEmail={otpRequestedForEmail}
                 resendSecondsLeft={resendSecondsLeft}
             />
-        </div>
+        </motion.div>
     );
 }

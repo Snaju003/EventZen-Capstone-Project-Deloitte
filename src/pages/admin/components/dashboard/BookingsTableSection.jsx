@@ -3,6 +3,15 @@ import { motion } from "framer-motion";
 import { formatDashboardDate } from "@/pages/admin/components/dashboard/dashboard.utils";
 
 export function BookingsTableSection({ bookingRows, isActive, isLoading }) {
+  const rowVariants = {
+    hidden: { opacity: 0, y: 6 },
+    show: (index) => ({
+      opacity: 1,
+      y: 0,
+      transition: { duration: 0.2, delay: index * 0.03, ease: "easeOut" },
+    }),
+  };
+
   return (
     <div className={isActive ? undefined : "hidden"}>
       {!isLoading ? (
@@ -23,14 +32,14 @@ export function BookingsTableSection({ bookingRows, isActive, isLoading }) {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {bookingRows.map((row) => (
-                <tr key={row.id} className="text-slate-700">
+              {bookingRows.map((row, index) => (
+                <motion.tr key={row.id} className="text-slate-700" variants={rowVariants} initial="hidden" animate="show" custom={index}>
                   <td className="px-4 py-3 font-medium text-slate-900">{row.title}</td>
                   <td className="px-4 py-3 capitalize">{row.status}</td>
                   <td className="px-4 py-3">{row.confirmedSeats}</td>
                   <td className="px-4 py-3">{row.maxAttendees}</td>
                   <td className="px-4 py-3">{formatDashboardDate(row.startTime)}</td>
-                </tr>
+                </motion.tr>
               ))}
               {bookingRows.length === 0 ? (
                 <tr>

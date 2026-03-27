@@ -1,3 +1,5 @@
+import { useEffect, useState } from "react";
+
 import {
   Dialog,
   DialogContent,
@@ -13,23 +15,92 @@ export function VenueFormDialog({
   isSubmitting,
   isUploadingImages,
   onClose,
+  onImageDrop,
   onImageUpload,
   onOpenChange,
   onRemoveImage,
   onSubmit,
   setForm,
 }) {
+  const [isDragActive, setIsDragActive] = useState(false);
+
+  useEffect(() => {
+    if (!isOpen) {
+      setIsDragActive(false);
+    }
+  }, [isOpen]);
+
+  useEffect(() => {
+    if (!isOpen) {
+      return undefined;
+    }
+
+    const preventBrowserFileOpen = (event) => {
+      event.preventDefault();
+    };
+
+    window.addEventListener("dragover", preventBrowserFileOpen);
+    window.addEventListener("drop", preventBrowserFileOpen);
+
+    return () => {
+      window.removeEventListener("dragover", preventBrowserFileOpen);
+      window.removeEventListener("drop", preventBrowserFileOpen);
+    };
+  }, [isOpen]);
+
+  const handleDragOver = (event) => {
+    event.preventDefault();
+    if (isUploadingImages || isSubmitting) {
+      return;
+    }
+    setIsDragActive(true);
+  };
+
+  const handleDragLeave = () => {
+    setIsDragActive(false);
+  };
+
+  const handleDrop = async (event) => {
+    event.preventDefault();
+    setIsDragActive(false);
+
+    if (isUploadingImages || isSubmitting) {
+      return;
+    }
+
+    const files = event.dataTransfer?.files;
+    if (!files?.length) {
+      return;
+    }
+
+    await onImageDrop(files);
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-3xl">
-        <DialogHeader>
-          <DialogTitle>{editingId ? "Edit Venue" : "Create Venue"}</DialogTitle>
-          <DialogDescription>
-            Use this form to manage venue details and images.
-          </DialogDescription>
-        </DialogHeader>
+      <DialogContent
+        className={`relative z-[70] max-h-[90vh] overflow-y-auto bg-white sm:max-w-3xl ${isDragActive ? "ring-2 ring-primary/50" : ""}`}
+      >
+        <div
+          className="relative"
+          onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
+          onDrop={handleDrop}
+        >
+          {isDragActive ? (
+            <div className="pointer-events-none absolute inset-4 z-20 flex items-center justify-center rounded-2xl border-2 border-dashed border-primary/70 bg-primary/10">
+              <p className="rounded-full bg-white/95 px-4 py-2 text-sm font-bold text-primary shadow-sm">Drop images anywhere in this dialog to upload</p>
+            </div>
+          ) : null}
 
-        <form onSubmit={onSubmit} className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          <DialogHeader>
+            <DialogTitle>{editingId ? "Edit Venue" : "Create Venue"}</DialogTitle>
+            <DialogDescription>
+              Use this form to manage venue details and images.
+            </DialogDescription>
+          </DialogHeader>
+
+          <form onSubmit={onSubmit} className="grid grid-cols-1 gap-4 md:grid-cols-2">
           <input
             value={form.name}
             onChange={(event) => setForm((previous) => ({ ...previous, name: event.target.value }))}
@@ -65,14 +136,20 @@ export function VenueFormDialog({
 
           <div className="md:col-span-2">
             <label className="mb-2 block text-sm font-medium text-slate-700">Venue Images</label>
-            <input
-              type="file"
-              accept="image/png,image/jpeg,image/jpg,image/webp"
-              multiple
-              onChange={onImageUpload}
-              disabled={isUploadingImages || isSubmitting}
-              className="block w-full cursor-pointer rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm file:mr-3 file:rounded-md file:border-0 file:bg-slate-50 file:px-3 file:py-1.5 file:text-sm file:font-medium"
-            />
+            <div className={`rounded-lg border-2 border-dashed p-3 transition-all ${isDragActive ? "border-primary bg-primary/8 shadow-[0_0_0_3px_rgba(59,130,246,0.14)]" : "border-slate-300 bg-slate-50/60"}`}>
+              <div className="mb-2 rounded-lg bg-slate-900 px-2.5 py-1.5 text-[11px] font-semibold uppercase tracking-[0.12em] text-white">
+                Drag & Drop Enabled
+              </div>
+              <input
+                type="file"
+                accept="image/png,image/jpeg,image/jpg,image/webp"
+                multiple
+                onChange={onImageUpload}
+                disabled={isUploadingImages || isSubmitting}
+                className="block w-full cursor-pointer rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm file:mr-3 file:rounded-md file:border-0 file:bg-slate-50 file:px-3 file:py-1.5 file:text-sm file:font-medium"
+              />
+              <p className="mt-2 text-xs font-semibold text-slate-700">Tip: You can also drop images anywhere inside the dialog.</p>
+            </div>
             <p className="mt-1 text-xs text-slate-500">Upload up to 10 images. Supported: JPG, PNG, WEBP.</p>
 
             {isUploadingImages ? <p className="mt-2 text-sm text-primary">Uploading images...</p> : null}
@@ -95,9 +172,9 @@ export function VenueFormDialog({
             ) : null}
           </div>
 
-          <div className="flex gap-2 md:col-span-2">
-            <button type="submit" disabled={isSubmitting} className="h-11 rounded-lg bg-primary px-4 font-semibold text-white disabled:bg-slate-300">
-              {isSubmitting ? "Saving..." : editingId ? "Update Venue" : "Create Venue"}
+            <div className="flex gap-2 md:col-span-2">
+            <button type="submit" disabled={isSubmitting || isUploadingImages} className="h-11 rounded-lg bg-primary px-4 font-semibold text-white disabled:bg-slate-300">
+              {isSubmitting ? "Saving..." : isUploadingImages ? "Uploading images..." : editingId ? "Update Venue" : "Create Venue"}
             </button>
             <button
               type="button"
@@ -108,7 +185,8 @@ export function VenueFormDialog({
               Cancel
             </button>
           </div>
-        </form>
+          </form>
+        </div>
       </DialogContent>
     </Dialog>
   );

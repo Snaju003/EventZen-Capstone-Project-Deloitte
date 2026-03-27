@@ -1,6 +1,15 @@
 import { motion } from "framer-motion";
 
 export function VendorsTableSection({ isActive, isLoading, vendors }) {
+  const rowVariants = {
+    hidden: { opacity: 0, y: 6 },
+    show: (index) => ({
+      opacity: 1,
+      y: 0,
+      transition: { duration: 0.2, delay: index * 0.03, ease: "easeOut" },
+    }),
+  };
+
   return (
     <div className={isActive ? undefined : "hidden"}>
       {!isLoading ? (
@@ -19,12 +28,12 @@ export function VendorsTableSection({ isActive, isLoading, vendors }) {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {vendors.map((vendor) => (
-                <tr key={vendor.id} className="text-slate-700">
+              {vendors.map((vendor, index) => (
+                <motion.tr key={vendor.id} className="text-slate-700" variants={rowVariants} initial="hidden" animate="show" custom={index}>
                   <td className="px-4 py-3 font-medium text-slate-900">{vendor.name || "-"}</td>
                   <td className="px-4 py-3">{vendor.serviceType || "-"}</td>
                   <td className="px-4 py-3">{vendor.contactEmail || "-"}</td>
-                </tr>
+                </motion.tr>
               ))}
               {vendors.length === 0 ? (
                 <tr>

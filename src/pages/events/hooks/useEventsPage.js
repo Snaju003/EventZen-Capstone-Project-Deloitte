@@ -18,6 +18,7 @@ const defaultFilters = {
   venueId: "",
   startDate: "",
   endDate: "",
+  sortDir: "asc",
 };
 
 export function useEventsPage() {
@@ -61,7 +62,7 @@ export function useEventsPage() {
         page: currentPage,
         size: PAGE_SIZE,
         sortBy: "startTime",
-        sortDir: "asc",
+        sortDir: filters.sortDir || "asc",
       });
 
       setEvents(pageResponse.items);
@@ -79,7 +80,7 @@ export function useEventsPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [currentPage, debouncedSearch, filters.endDate, filters.startDate, filters.venueId]);
+  }, [currentPage, debouncedSearch, filters.endDate, filters.sortDir, filters.startDate, filters.venueId]);
 
   useEffect(() => {
     loadVenues();

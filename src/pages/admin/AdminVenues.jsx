@@ -1,6 +1,7 @@
 import { VenueCard } from "@/pages/admin/components/venues/VenueCard";
 import { VenueFormDialog } from "@/pages/admin/components/venues/VenueFormDialog";
 import { useAdminVenuesPage } from "@/pages/admin/hooks/useAdminVenuesPage";
+import { VenueDescriptionDialog } from "@/components/common/VenueDescriptionDialog";
 
 export default function AdminVenues() {
   const {
@@ -8,6 +9,7 @@ export default function AdminVenues() {
     deletingVenueId,
     editingId,
     form,
+    handleImageDrop,
     handleImageUpload,
     isFormDialogOpen,
     isLoading,
@@ -18,7 +20,9 @@ export default function AdminVenues() {
     removeVenue,
     resetForm,
     setForm,
+    setSelectedVenueForDescription,
     setIsFormDialogOpen,
+    selectedVenueForDescription,
     startEdit,
     submitVenue,
     venues,
@@ -59,6 +63,7 @@ export default function AdminVenues() {
           isSubmitting={isSubmitting}
           isUploadingImages={isUploadingImages}
           onClose={closeFormDialog}
+          onImageDrop={handleImageDrop}
           onImageUpload={handleImageUpload}
           onOpenChange={(open) => {
             setIsFormDialogOpen(open);
@@ -83,6 +88,7 @@ export default function AdminVenues() {
                 isSubmitting={isSubmitting}
                 onDelete={removeVenue}
                 onEdit={startEdit}
+                onShowMore={setSelectedVenueForDescription}
               />
             ))}
 
@@ -91,6 +97,19 @@ export default function AdminVenues() {
             ) : null}
           </div>
         )}
+
+        <VenueDescriptionDialog
+          isOpen={Boolean(selectedVenueForDescription)}
+          onOpenChange={(open) => {
+            if (!open) {
+              setSelectedVenueForDescription(null);
+            }
+          }}
+          name={selectedVenueForDescription?.name}
+          address={selectedVenueForDescription?.address}
+          capacity={selectedVenueForDescription?.capacity}
+          description={selectedVenueForDescription?.description}
+        />
       </main>
     </div>
   );

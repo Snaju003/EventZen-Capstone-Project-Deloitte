@@ -4,6 +4,15 @@ import { motion } from "framer-motion";
 
 import { fadeUp } from "@/lib/animations";
 
+function formatCurrency(amount) {
+  return new Intl.NumberFormat("en-IN", {
+    style: "currency",
+    currency: "INR",
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(amount);
+}
+
 export function EventBookingPanel({
   availableSeats,
   canBook,
@@ -13,12 +22,19 @@ export function EventBookingPanel({
   isAuthenticated,
   isBooking,
   maxAttendees,
+  maxTicketsPerBooking,
   nonBookReason,
+  paymentBreakdown,
   seatCount,
   seatPercentage,
   setSeatCount,
   confirmedSeats,
 }) {
+  const parsedSeatCount = Number(seatCount);
+  const maxSelectableSeats = Math.max(Math.min(availableSeats, maxTicketsPerBooking), 1);
+  const exceedsPerBookingLimit = Number.isFinite(parsedSeatCount) && parsedSeatCount > maxTicketsPerBooking;
+  const exceedsAvailability = Number.isFinite(parsedSeatCount) && parsedSeatCount > availableSeats;
+
   return (
     <motion.aside
       variants={fadeUp}
@@ -52,18 +68,48 @@ export function EventBookingPanel({
         <p className="text-xs text-slate-500">{seatPercentage}% booked</p>
       </div>
 
-      <form onSubmit={handleBook} className="mt-5 space-y-3">
+      <form noValidate onSubmit={handleBook} className="mt-5 space-y-3">
         <label className="flex flex-col gap-1 text-sm text-slate-700">
           <span className="font-medium">Seat count</span>
           <input
             type="number"
             min={1}
-            max={Math.max(availableSeats, 1)}
+            inputMode="numeric"
             value={seatCount}
             onChange={(inputEvent) => setSeatCount(inputEvent.target.value)}
             className="h-11 rounded-lg border border-slate-200 px-3 outline-none ring-primary/20 transition-all focus:border-primary focus:ring-2"
           />
         </label>
+        <p className="text-xs text-slate-500">Choose 1-{maxSelectableSeats} seats. Maximum {maxTicketsPerBooking} tickets per booking.</p>
+        {exceedsPerBookingLimit ? (
+          <p className="text-xs text-red-700">You can book up to {maxTicketsPerBooking} tickets in one transaction.</p>
+        ) : null}
+        {exceedsAvailability ? (
+          <p className="text-xs text-red-700">Only {availableSeats} seats are available right now.</p>
+        ) : null}
+
+        {paymentBreakdown && (
+          <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3">
+            <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-emerald-700">Payment Summary</p>
+            <div className="space-y-1.5 text-sm text-slate-700">
+              <p className="flex items-center justify-between gap-2">
+                <span>Ticket Price ({paymentBreakdown.seatCount} x {formatCurrency(paymentBreakdown.ticketPrice)})</span>
+                <span>{formatCurrency(paymentBreakdown.baseAmount)}</span>
+              </p>
+              {paymentBreakdown.convenienceFee > 0 && (
+                <p className="flex items-center justify-between gap-2 text-slate-600">
+                  <span>Convenience Fee ({paymentBreakdown.convenienceFeePercent}%)</span>
+                  <span>{formatCurrency(paymentBreakdown.convenienceFee)}</span>
+                </p>
+              )}
+              <div className="my-1.5 border-t border-emerald-200" />
+              <p className="flex items-center justify-between gap-2 font-bold text-emerald-800">
+                <span>Total Amount</span>
+                <span>{formatCurrency(paymentBreakdown.totalAmount)}</span>
+              </p>
+            </div>
+          </div>
+        )}
 
         {isAuthenticated ? (
           <motion.button

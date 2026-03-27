@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { DollarSign, FileText, ImageIcon, Info, Tag, Users, X } from "lucide-react";
 
 import { EventDateTimePicker } from "@/pages/admin/components/event-form/EventDateTimePicker";
@@ -27,10 +27,40 @@ export function EventFormDialog({
   uploadingImages,
   onSubmit,
   onClose,
+  onImageDrop,
   onImageUpload,
   onRemoveImage,
 }) {
   const descriptionRef = useRef(null);
+  const [isDragActive, setIsDragActive] = useState(false);
+
+  const handleDragOver = (event) => {
+    event.preventDefault();
+    if (uploadingImages || submitting) {
+      return;
+    }
+    setIsDragActive(true);
+  };
+
+  const handleDragLeave = () => {
+    setIsDragActive(false);
+  };
+
+  const handleDrop = async (event) => {
+    event.preventDefault();
+    setIsDragActive(false);
+
+    if (uploadingImages || submitting) {
+      return;
+    }
+
+    const files = event.dataTransfer?.files;
+    if (!files?.length) {
+      return;
+    }
+
+    await onImageDrop(files);
+  };
 
   useEffect(() => {
     const textarea = descriptionRef.current;
@@ -140,14 +170,25 @@ export function EventFormDialog({
       <div className="md:col-span-2">
         <FormSectionDivider title="Event Images" />
         <EventFieldLabel icon={ImageIcon} label="Upload Photos" hint="Up to 10 images — JPG, PNG, or WEBP (best: 16:9 ratio)" />
-        <input
-          type="file"
-          accept="image/png,image/jpeg,image/jpg,image/webp"
-          multiple
-          onChange={onImageUpload}
-          disabled={uploadingImages || submitting}
-          className="mt-1 block w-full cursor-pointer rounded-xl border border-dashed border-slate-300 bg-slate-50/60 px-3 py-2.5 text-sm text-slate-600 transition-colors hover:border-primary/50 hover:bg-slate-50 file:mr-3 file:rounded-lg file:border-0 file:bg-primary/10 file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-primary"
-        />
+        <div
+          onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
+          onDrop={handleDrop}
+          className={`mt-1 rounded-xl border-2 border-dashed p-3 transition-all ${isDragActive ? "border-primary bg-primary/8 shadow-[0_0_0_3px_rgba(59,130,246,0.14)]" : "border-slate-300 bg-slate-50/60"}`}
+        >
+          <div className="mb-2 rounded-lg bg-slate-900 px-2.5 py-1.5 text-[11px] font-semibold uppercase tracking-[0.12em] text-white">
+            Drag & Drop Enabled
+          </div>
+          <input
+            type="file"
+            accept="image/png,image/jpeg,image/jpg,image/webp"
+            multiple
+            onChange={onImageUpload}
+            disabled={uploadingImages || submitting}
+            className="block w-full cursor-pointer rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-600 transition-colors hover:border-primary/50 file:mr-3 file:rounded-lg file:border-0 file:bg-primary/10 file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-primary"
+          />
+          <p className="mt-2 text-xs font-semibold text-slate-700">Tip: You can also drop images anywhere inside the dialog.</p>
+        </div>
         {uploadingImages ? <p className="mt-2 text-xs text-primary">Uploading images...</p> : null}
 
         {form.imageUrls?.length > 0 ? (
@@ -172,10 +213,10 @@ export function EventFormDialog({
       <div className="flex flex-wrap gap-2 border-t border-slate-100 pt-4 md:col-span-2">
         <button
           type="submit"
-          disabled={submitting}
+          disabled={submitting || uploadingImages}
           className="h-10 rounded-xl bg-primary px-5 text-sm font-bold text-white shadow-sm transition-all hover:opacity-90 disabled:opacity-60 active:scale-95"
         >
-          {submitting ? "Saving..." : editingId ? "Update Event" : "Create Event"}
+          {submitting ? "Saving..." : uploadingImages ? "Uploading images..." : editingId ? "Update Event" : "Create Event"}
         </button>
         <button
           type="button"

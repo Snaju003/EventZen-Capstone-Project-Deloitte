@@ -54,8 +54,7 @@ export function useAdminEventMutations(state) {
     setCurrentPage(1);
   };
 
-  const handleImageUpload = async (inputEvent) => {
-    const files = inputEvent.target.files;
+  const uploadEventImages = async (files) => {
     if (!files?.length) return;
 
     setUploadingImages(true);
@@ -73,13 +72,26 @@ export function useAdminEventMutations(state) {
     } catch (error) {
       toast.error(getApiErrorMessage(error, "Failed to upload event images."));
     } finally {
-      inputEvent.target.value = "";
       setUploadingImages(false);
     }
   };
 
+  const handleImageUpload = async (inputEvent) => {
+    await uploadEventImages(inputEvent.target.files);
+    inputEvent.target.value = "";
+  };
+
+  const handleImageDrop = async (files) => {
+    await uploadEventImages(files);
+  };
+
   const handleSubmit = async (submitEvent) => {
     submitEvent.preventDefault();
+
+    if (state.uploadingImages) {
+      toast.error("Please wait for images to finish uploading.");
+      return;
+    }
 
     const startDate = new Date(form.startTime);
     const endDate = new Date(form.endTime);
@@ -219,6 +231,7 @@ export function useAdminEventMutations(state) {
     handleSearchChange,
     handleStatusChange,
     handleImageUpload,
+    handleImageDrop,
     handleSubmit,
     removeImageAtIndex,
     onAssignmentChange,

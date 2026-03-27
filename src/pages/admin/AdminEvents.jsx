@@ -90,6 +90,7 @@ export default function AdminEvents() {
           isOpen={isFormDialogOpen}
           onClose={page.closeFormDialog}
           onImageUpload={actions.handleImageUpload}
+          onImageDrop={actions.handleImageDrop}
           onOpenChange={(open) => {
             setIsFormDialogOpen(open);
             if (!open) resetForm();
