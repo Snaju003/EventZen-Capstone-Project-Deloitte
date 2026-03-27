@@ -3,11 +3,13 @@ package com.eventzen.eventservice.controller;
 import com.eventzen.eventservice.dto.EventRequestDTO;
 import com.eventzen.eventservice.dto.EventRejectionDTO;
 import com.eventzen.eventservice.dto.EventPageResponse;
+import com.eventzen.eventservice.dto.GenerateDescriptionDTO;
 import com.eventzen.eventservice.dto.InternalEventAccessV1Response;
 import com.eventzen.eventservice.dto.VendorAssignmentDTO;
 import com.eventzen.eventservice.exception.ForbiddenException;
 import com.eventzen.eventservice.model.Event;
 import com.eventzen.eventservice.service.EventService;
+import com.eventzen.eventservice.service.GroqService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -17,6 +19,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/events")
@@ -24,6 +27,18 @@ import java.util.List;
 public class EventController {
 
     private final EventService eventService;
+    private final GroqService groqService;
+
+    // POST /events/generate-description - admin or vendor
+    @PostMapping("/generate-description")
+    public ResponseEntity<Map<String, String>> generateDescription(
+            @RequestHeader("X-User-Role") String role,
+            @Valid @RequestBody GenerateDescriptionDTO dto) {
+
+        requireAdminOrVendor(role);
+        String description = groqService.generateDescription(dto.getTitle());
+        return ResponseEntity.ok(Map.of("description", description));
+    }
 
     // GET /events - role-aware (admin sees all, customer sees published only)
     @GetMapping

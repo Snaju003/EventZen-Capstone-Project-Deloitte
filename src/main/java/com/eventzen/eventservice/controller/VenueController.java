@@ -1,8 +1,10 @@
 package com.eventzen.eventservice.controller;
 
+import com.eventzen.eventservice.dto.GenerateDescriptionDTO;
 import com.eventzen.eventservice.dto.VenueRequestDTO;
 import com.eventzen.eventservice.exception.ForbiddenException;
 import com.eventzen.eventservice.model.Venue;
+import com.eventzen.eventservice.service.GroqService;
 import com.eventzen.eventservice.service.VenueService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -11,6 +13,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/venues")
@@ -18,6 +21,18 @@ import java.util.List;
 public class VenueController {
 
     private final VenueService venueService;
+    private final GroqService groqService;
+
+    // POST /venues/generate-description - admin only
+    @PostMapping("/generate-description")
+    public ResponseEntity<Map<String, String>> generateDescription(
+            @RequestHeader("X-User-Role") String role,
+            @Valid @RequestBody GenerateDescriptionDTO dto) {
+
+        requireAdmin(role);
+        String description = groqService.generateVenueDescription(dto.getTitle());
+        return ResponseEntity.ok(Map.of("description", description));
+    }
 
     // GET /venues - public (both roles)
     @GetMapping
