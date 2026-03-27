@@ -23,4 +23,12 @@ public class Booking
 
     [BsonElement("booked_at")]
     public DateTime BookedAt { get; set; } = DateTime.UtcNow;
+
+    [BsonElement("checked_in_at")]
+    [BsonIgnoreIfNull]
+    public DateTime? CheckedInAt { get; set; }
+
+    [BsonElement("checked_in_by")]
+    [BsonIgnoreIfNull]
+    public string? CheckedInBy { get; set; }
 }

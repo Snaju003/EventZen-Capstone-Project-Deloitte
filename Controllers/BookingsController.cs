@@ -91,4 +91,18 @@ public class BookingsController : ControllerBase
 
         return Ok(new{message="Booking cancelled by admin"});
     }
+
+    [HttpPost("check-in")]
+    public async Task<IActionResult> CheckIn(CheckInDto dto)
+    {
+        if(UserId==null) return Unauthorized();
+        if(Role!="vendor" && Role!="admin")
+            return StatusCode(403,new{error="Only vendors and admins can check in attendees", statusCode=403});
+
+        var (success,error,code,data) = await _service.CheckInAsync(dto.BookingId, dto.EventId, UserId);
+
+        if(!success) return StatusCode(code,new{error,statusCode=code});
+
+        return Ok(data);
+    }
 }

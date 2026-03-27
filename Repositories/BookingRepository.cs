@@ -38,6 +38,22 @@ public class BookingRepository : IBookingRepository
         return result.ModifiedCount > 0;
     }
 
+    public async Task<bool> CheckInAsync(string bookingId, string vendorUserId)
+    {
+        var filter = Builders<Booking>.Filter.And(
+            Builders<Booking>.Filter.Eq(b => b.Id, bookingId),
+            Builders<Booking>.Filter.Eq(b => b.Status, BookingStatuses.Confirmed)
+        );
+
+        var update = Builders<Booking>.Update
+            .Set(b => b.Status, BookingStatuses.CheckedIn)
+            .Set(b => b.CheckedInAt, DateTime.UtcNow)
+            .Set(b => b.CheckedInBy, vendorUserId);
+
+        var result = await _bookings.UpdateOneAsync(filter, update);
+        return result.ModifiedCount > 0;
+    }
+
     public async Task<List<Booking>> GetByEventIdAsync(string eventId)
     {
         return await _bookings.Find(b => b.EventId == eventId && b.Status == BookingStatuses.Confirmed).ToListAsync();

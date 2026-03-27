@@ -120,6 +120,41 @@ public class BookingService : IBookingService
         return (true, null, 200);
     }
 
+    public async Task<(bool, string?, int, object?)> CheckInAsync(string bookingId, string eventId, string vendorUserId)
+    {
+        var booking = await _repo.GetByIdAsync(bookingId);
+
+        if (booking == null)
+            return (false, "Booking not found", 404, null);
+
+        if (booking.EventId != eventId)
+            return (false, "This ticket does not belong to this event", 400, null);
+
+        if (booking.Status == BookingStatuses.Cancelled)
+            return (false, "This booking has been cancelled", 400, null);
+
+        if (booking.Status == BookingStatuses.CheckedIn)
+            return (false, "This ticket has already been checked in", 409, null);
+
+        if (booking.Status != BookingStatuses.Confirmed)
+            return (false, "Invalid booking status for check-in", 400, null);
+
+        var updated = await _repo.CheckInAsync(bookingId, vendorUserId);
+        if (!updated)
+            return (false, "Check-in failed — ticket may have already been scanned", 409, null);
+
+        // Fetch attendee name for the vendor's scanner success screen
+        var user = await _authClient.GetUserByIdAsync(booking.UserId);
+
+        return (true, null, 200, new
+        {
+            message = "Check-in successful",
+            attendeeName = user?.Name ?? "Attendee",
+            seatCount = booking.SeatCount,
+            bookingId = booking.Id,
+        });
+    }
+
     public async Task<List<AttendeeResponseDto>> GetEventAttendeesAsync(string eventId)
     {
         var bookings = await _repo.GetByEventIdAsync(eventId);
