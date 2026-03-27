@@ -106,6 +106,7 @@ export default function AdminEvents() {
           submitting={submitting}
           uploadingImages={uploadingImages}
           venues={venues}
+          allEvents={events}
         />
 
         {isLoading ? (

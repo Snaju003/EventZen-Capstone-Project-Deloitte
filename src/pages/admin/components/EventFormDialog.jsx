@@ -1,5 +1,7 @@
-import { useEffect, useRef, useState } from "react";
-import { DollarSign, FileText, ImageIcon, Info, Tag, Users, X } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { CloudUpload, DollarSign, FileText, ImageIcon, Info, Sparkles, Tag, Users, X } from "lucide-react";
+
+import { generateEventDescription } from "@/lib/events-api";
 
 import { EventDateTimePicker } from "@/pages/admin/components/event-form/EventDateTimePicker";
 import { EventFieldLabel } from "@/pages/admin/components/event-form/EventFieldLabel";
@@ -30,9 +32,50 @@ export function EventFormDialog({
   onImageDrop,
   onImageUpload,
   onRemoveImage,
+  allEvents = [],
 }) {
   const descriptionRef = useRef(null);
   const [isDragActive, setIsDragActive] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [generateError, setGenerateError] = useState("");
+
+  const bookedDates = useMemo(() => {
+    if (!form.venueId) return [];
+    return allEvents
+      .filter((event) => event.venueId === form.venueId && event.id !== editingId)
+      .flatMap((event) => {
+        const dates = [];
+        const start = event.startTime ? new Date(event.startTime) : null;
+        const end = event.endTime ? new Date(event.endTime) : null;
+        if (start && end) {
+          const cursor = new Date(start.getFullYear(), start.getMonth(), start.getDate());
+          const endDay = new Date(end.getFullYear(), end.getMonth(), end.getDate());
+          while (cursor <= endDay) {
+            dates.push(new Date(cursor));
+            cursor.setDate(cursor.getDate() + 1);
+          }
+        } else if (start) {
+          dates.push(new Date(start.getFullYear(), start.getMonth(), start.getDate()));
+        }
+        return dates;
+      });
+  }, [allEvents, form.venueId, editingId]);
+
+  const handleGenerateDescription = async () => {
+    if (!form.title?.trim() || isGenerating) return;
+
+    setIsGenerating(true);
+    setGenerateError("");
+
+    try {
+      const description = await generateEventDescription(form.title.trim());
+      setForm((previous) => ({ ...previous, description }));
+    } catch (error) {
+      setGenerateError("Failed to generate. Please try again.");
+    } finally {
+      setIsGenerating(false);
+    }
+  };
 
   const handleDragOver = (event) => {
     event.preventDefault();
@@ -92,15 +135,40 @@ export function EventFormDialog({
       />
 
       <div className="flex flex-col gap-1 md:col-span-2">
-        <EventFieldLabel icon={FileText} label="Description" hint="Provide details about what attendees can expect" />
-        <textarea
-          ref={descriptionRef}
-          value={form.description}
-          onChange={(event) => setForm((previous) => ({ ...previous, description: event.target.value }))}
-          placeholder="Describe your event — agenda, speakers, activities, dress code..."
-          rows={3}
-          className="w-full resize-none rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm leading-relaxed text-slate-800 shadow-sm outline-none transition-all placeholder:text-slate-400 focus:border-primary focus:ring-2 focus:ring-primary/20"
-        />
+        <div className="flex items-end justify-between gap-2">
+          <EventFieldLabel icon={FileText} label="Description" hint="Provide details about what attendees can expect" />
+          <button
+            type="button"
+            onClick={handleGenerateDescription}
+            disabled={!form.title?.trim() || isGenerating}
+            className="group mb-0.5 flex items-center gap-1.5 rounded-lg border border-violet-200 bg-gradient-to-r from-violet-50 to-purple-50 px-2.5 py-1 text-[11px] font-semibold text-violet-700 shadow-sm transition-all hover:border-violet-300 hover:from-violet-100 hover:to-purple-100 hover:shadow active:scale-95 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:from-violet-50 disabled:hover:to-purple-50 disabled:active:scale-100"
+          >
+            <Sparkles className={`h-3.5 w-3.5 ${isGenerating ? "animate-spin" : "transition-transform group-hover:scale-110"}`} />
+            {isGenerating ? "Generating..." : "Generate with AI"}
+          </button>
+        </div>
+        <div className="relative">
+          <textarea
+            ref={descriptionRef}
+            value={form.description}
+            onChange={(event) => setForm((previous) => ({ ...previous, description: event.target.value }))}
+            placeholder="Describe your event — agenda, speakers, activities, dress code..."
+            rows={3}
+            disabled={isGenerating}
+            className={`w-full resize-none rounded-xl border bg-white px-3.5 py-2.5 text-sm leading-relaxed text-slate-800 shadow-sm outline-none transition-all placeholder:text-slate-400 focus:border-primary focus:ring-2 focus:ring-primary/20 disabled:cursor-not-allowed ${isGenerating ? "animate-pulse border-violet-200 bg-violet-50/30" : "border-slate-200"}`}
+          />
+          {isGenerating && (
+            <div className="absolute inset-0 flex items-center justify-center rounded-xl">
+              <div className="flex items-center gap-2 rounded-full bg-white/90 px-3 py-1.5 shadow-sm ring-1 ring-violet-100">
+                <div className="h-1.5 w-1.5 animate-bounce rounded-full bg-violet-500 [animation-delay:-0.3s]" />
+                <div className="h-1.5 w-1.5 animate-bounce rounded-full bg-violet-500 [animation-delay:-0.15s]" />
+                <div className="h-1.5 w-1.5 animate-bounce rounded-full bg-violet-500" />
+                <span className="ml-1 text-xs font-medium text-violet-600">Writing your description...</span>
+              </div>
+            </div>
+          )}
+        </div>
+        {generateError && <p className="mt-1 text-xs text-red-500">{generateError}</p>}
       </div>
 
       <FormSectionDivider title="Schedule" />
@@ -110,6 +178,7 @@ export function EventFormDialog({
         hint="When does the event begin?"
         value={form.startTime}
         onChange={(nextValue) => setForm((previous) => ({ ...previous, startTime: nextValue }))}
+        bookedDates={bookedDates}
         required
       />
 
@@ -119,6 +188,7 @@ export function EventFormDialog({
         value={form.endTime}
         onChange={(nextValue) => setForm((previous) => ({ ...previous, endTime: nextValue }))}
         minValue={form.startTime}
+        bookedDates={bookedDates}
         required
       />
 
@@ -174,20 +244,25 @@ export function EventFormDialog({
           onDragOver={handleDragOver}
           onDragLeave={handleDragLeave}
           onDrop={handleDrop}
-          className={`mt-1 rounded-xl border-2 border-dashed p-3 transition-all ${isDragActive ? "border-primary bg-primary/8 shadow-[0_0_0_3px_rgba(59,130,246,0.14)]" : "border-slate-300 bg-slate-50/60"}`}
+          className={`group mt-1 cursor-pointer rounded-xl border-2 border-dashed px-4 py-5 text-center transition-all duration-200 ${isDragActive ? "border-primary bg-primary/5 shadow-[0_0_0_3px_rgba(59,130,246,0.12)]" : "border-slate-200 bg-slate-50/50 hover:border-slate-300 hover:bg-slate-50"}`}
         >
-          <div className="mb-2 rounded-lg bg-slate-900 px-2.5 py-1.5 text-[11px] font-semibold uppercase tracking-[0.12em] text-white">
-            Drag & Drop Enabled
-          </div>
-          <input
-            type="file"
-            accept="image/png,image/jpeg,image/jpg,image/webp"
-            multiple
-            onChange={onImageUpload}
-            disabled={uploadingImages || submitting}
-            className="block w-full cursor-pointer rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-600 transition-colors hover:border-primary/50 file:mr-3 file:rounded-lg file:border-0 file:bg-primary/10 file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-primary"
-          />
-          <p className="mt-2 text-xs font-semibold text-slate-700">Tip: You can also drop images anywhere inside the dialog.</p>
+          <CloudUpload className={`mx-auto mb-2 h-8 w-8 transition-colors ${isDragActive ? "text-primary" : "text-slate-400 group-hover:text-slate-500"}`} />
+          <p className={`text-sm font-medium transition-colors ${isDragActive ? "text-primary" : "text-slate-600"}`}>
+            {isDragActive ? "Drop your images here" : "Drag & drop images here"}
+          </p>
+          <p className="mt-1 text-xs text-slate-400">or</p>
+          <label className="mt-2 inline-flex cursor-pointer items-center rounded-lg border border-slate-200 bg-white px-3.5 py-1.5 text-xs font-semibold text-slate-600 shadow-sm transition-all hover:border-primary/40 hover:text-primary active:scale-95">
+            Browse files
+            <input
+              type="file"
+              accept="image/png,image/jpeg,image/jpg,image/webp"
+              multiple
+              onChange={onImageUpload}
+              disabled={uploadingImages || submitting}
+              className="sr-only"
+            />
+          </label>
+          <p className="mt-2 text-[11px] text-slate-400">JPG, PNG or WEBP — max 10 files</p>
         </div>
         {uploadingImages ? <p className="mt-2 text-xs text-primary">Uploading images...</p> : null}
 

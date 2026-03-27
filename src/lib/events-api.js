@@ -65,6 +65,11 @@ export async function createEvent(payload) {
   return response?.data || null;
 }
 
+export async function generateEventDescription(title) {
+  const response = await apiClient.post("/events/generate-description", { title });
+  return response?.data?.description || "";
+}
+
 export async function updateEvent(eventId, payload) {
   const response = await apiClient.put(`/events/${eventId}`, payload);
   return response?.data || null;
@@ -107,6 +112,11 @@ export async function removeVendorFromEvent(eventId, vendorId) {
 export async function createVenue(payload) {
   const response = await apiClient.post("/venues", payload);
   return response?.data || null;
+}
+
+export async function generateVenueDescription(name) {
+  const response = await apiClient.post("/venues/generate-description", { title: name });
+  return response?.data?.description || "";
 }
 
 export async function updateVenue(venueId, payload) {
