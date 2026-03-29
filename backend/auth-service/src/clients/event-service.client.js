@@ -1,3 +1,5 @@
+const crypto = require("crypto");
+
 function getEventServiceBaseUrls() {
 	const configuredUrls = [
 		process.env.EVENT_SERVICE_URL,
@@ -6,6 +8,27 @@ function getEventServiceBaseUrls() {
 	].filter((url) => typeof url === "string" && url.trim());
 
 	return [...new Set(configuredUrls.map((url) => url.replace(/\/$/, "")))];
+}
+
+function buildInternalHeaders({ method, path }) {
+  const secret = String(process.env.INTERNAL_SERVICE_SECRET || "").trim();
+  if (!secret) {
+    return {};
+  }
+
+  const timestamp = Date.now().toString();
+  const service = String(process.env.INTERNAL_CALLER_NAME || "auth-service").trim() || "auth-service";
+  const signature = crypto
+    .createHmac("sha256", secret)
+    .update(`${timestamp}.${method}.${path}.${service}`)
+    .digest("hex");
+
+  return {
+    "X-Internal-Secret": secret,
+    "X-Internal-Timestamp": timestamp,
+    "X-Internal-Service": service,
+    "X-Internal-Signature": signature,
+  };
 }
 
 async function syncApprovedVendor({ user, approver }) {
@@ -22,18 +45,22 @@ async function syncApprovedVendor({ user, approver }) {
 
 	let lastError = "Unknown error";
 
-	for (const baseUrl of baseUrls) {
-		const endpoint = `${baseUrl}/vendors/role-sync`;
+  for (const baseUrl of baseUrls) {
+    const endpoint = `${baseUrl}/vendors/role-sync`;
+    const endpointUrl = new URL(endpoint);
+    const method = "POST";
+    const path = `${endpointUrl.pathname}${endpointUrl.search}` || "/";
 
-		try {
-			const response = await fetch(endpoint, {
-				method: "POST",
-				headers: {
-					"Content-Type": "application/json",
-					"X-User-Id": approver?._id?.toString() || "internal-auth-service",
-					"X-User-Email": approver?.email || "internal-auth-service@eventzen.local",
-					"X-User-Role": approverRole,
-				},
+    try {
+      const response = await fetch(endpoint, {
+        method,
+        headers: {
+          "Content-Type": "application/json",
+          "X-User-Id": approver?._id?.toString() || "internal-auth-service",
+          "X-User-Email": approver?.email || "internal-auth-service@eventzen.local",
+          "X-User-Role": approverRole,
+          ...buildInternalHeaders({ method, path }),
+        },
 				body: JSON.stringify({
 					userId: user._id.toString(),
 					name: user.name,

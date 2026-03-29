@@ -1,8 +1,48 @@
 const { createProxyMiddleware } = require("http-proxy-middleware");
+const crypto = require("crypto");
 const { handleProxyError } = require("./errorHandler");
 const { RoundRobinBalancer } = require("../middleware/loadBalancer");
 
 const IDENTITY_HEADERS = ["X-User-Id", "X-User-Role", "X-User-Email"];
+const INTERNAL_HEADERS = [
+  "X-Internal-Secret",
+  "X-Internal-Timestamp",
+  "X-Internal-Service",
+  "X-Internal-Signature",
+];
+
+function createInternalSignature({ secret, timestamp, method, path, service }) {
+  return crypto
+    .createHmac("sha256", secret)
+    .update(`${timestamp}.${method}.${path}.${service}`)
+    .digest("hex");
+}
+
+function setInternalSecurityHeaders(proxyReq, req, { path } = {}) {
+  const internalSecret = String(process.env.INTERNAL_SERVICE_SECRET || "").trim();
+
+  if (!internalSecret) {
+    INTERNAL_HEADERS.forEach((headerName) => proxyReq.removeHeader(headerName));
+    return;
+  }
+
+  const timestamp = Date.now().toString();
+  const method = String(req.method || "GET").toUpperCase();
+  const service = String(process.env.INTERNAL_CALLER_NAME || "api-gateway").trim() || "api-gateway";
+  const signedPath = String(path || proxyReq.path || req.originalUrl || "/");
+  const signature = createInternalSignature({
+    secret: internalSecret,
+    timestamp,
+    method,
+    path: signedPath,
+    service,
+  });
+
+  proxyReq.setHeader("X-Internal-Secret", internalSecret);
+  proxyReq.setHeader("X-Internal-Timestamp", timestamp);
+  proxyReq.setHeader("X-Internal-Service", service);
+  proxyReq.setHeader("X-Internal-Signature", signature);
+}
 
 function setGatewayIdentityHeaders(proxyReq, user, { clearWhenMissing = false } = {}) {
   const userId = user?._id || user?.sub || "";
@@ -77,6 +117,7 @@ function createServiceProxy({
         if (balancer) {
           req._proxyTarget = `${proxyReq.protocol}//${proxyReq.host}`;
         }
+        setInternalSecurityHeaders(proxyReq, req, { path: proxyReq.path });
         onProxyReq?.(proxyReq, req);
         logProxyRequest(req, effectiveTarget, proxyReq.path);
       },
@@ -88,4 +129,5 @@ module.exports = {
   createServiceProxy,
   logProxyRequest,
   setGatewayIdentityHeaders,
+  setInternalSecurityHeaders,
 };

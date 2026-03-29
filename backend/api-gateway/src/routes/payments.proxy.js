@@ -3,7 +3,11 @@ const { createProxyMiddleware } = require("http-proxy-middleware");
 
 const proxyConfig = require("../config/proxy.config");
 const { verifyToken, authorizeRoles } = require("../middleware/jwt.middleware");
-const { createServiceProxy, setGatewayIdentityHeaders } = require("../utils/proxyHelpers");
+const {
+  createServiceProxy,
+  setGatewayIdentityHeaders,
+  setInternalSecurityHeaders,
+} = require("../utils/proxyHelpers");
 const { handleProxyError } = require("../utils/errorHandler");
 
 const router = express.Router();
@@ -29,6 +33,7 @@ const revenueSummaryProxy = createProxyMiddleware({
   on: {
     error: handleProxyError("Payment Service"),
     proxyReq: (proxyReq, req) => {
+      setInternalSecurityHeaders(proxyReq, req, { path: proxyReq.path });
       setGatewayIdentityHeaders(proxyReq, req.user);
     },
   },

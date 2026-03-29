@@ -1,1 +1,24 @@
 .env
+
+# Dependency directories
+**/node_modules/
+
+# Build outputs
+**/dist/
+**/build/
+**/target/
+**/bin/
+**/obj/
+
+# Logs and runtime artifacts
+**/*.log
+vault/runtime/
+
+# Local uploads/generated assets
+backend/auth-service/uploads/
+
+# OS/editor files
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

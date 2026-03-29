@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { Calendar, LayoutDashboard, Menu, Ticket, X } from "lucide-react";
+import { Calendar, LayoutDashboard, MapPin, Menu, Ticket, UserCheck, X } from "lucide-react";
 import { NotificationBellButton, NotificationsPanel } from "@/components/layout/NotificationsPanel";
 
 import { Button } from "@/components/ui/button";
@@ -17,20 +17,20 @@ const publicNavLinks = [
 
 const userNavLinks = [
   { to: "/events", label: "Events", icon: Calendar },
-  { to: "/venues", label: "Venues", icon: Calendar },
+  { to: "/venues", label: "Venues", icon: MapPin },
   { to: "/my-bookings", label: "My Bookings", icon: Ticket },
 ];
 
 const adminNavLinks = [
   { to: "/admin/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { to: "/admin/events", label: "Events", icon: Calendar },
-  { to: "/admin/venues", label: "Venues", icon: Calendar },
-  { to: "/admin/vendors", label: "Vendor Requests", icon: Calendar },
+  { to: "/admin/venues", label: "Venues", icon: MapPin },
+  { to: "/admin/vendors", label: "Vendor Requests", icon: UserCheck },
 ];
 
 const vendorNavLinks = [
   { to: "/admin/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { to: "/vendor/requests", label: "My Requests", icon: Calendar },
+  { to: "/vendor/requests", label: "My Requests", icon: Ticket },
 ];
 
 function PublicNavItem({ item }) {

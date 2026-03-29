@@ -1,4 +1,187 @@
 services:
+  vault:
+    image: hashicorp/vault:1.17
+    container_name: eventzen-vault
+    restart: unless-stopped
+    cap_add:
+      - IPC_LOCK
+    environment:
+      VAULT_DEV_ROOT_TOKEN_ID: root
+      VAULT_DEV_LISTEN_ADDRESS: 0.0.0.0:8200
+      VAULT_ADDR: http://127.0.0.1:8200
+      VAULT_UI: "true"
+    command: vault server -dev -dev-root-token-id=root -dev-listen-address=0.0.0.0:8200
+    healthcheck:
+      test: ["CMD", "vault", "status"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    volumes:
+      - vault_data:/vault/file
+      - vault_runtime:/vault/runtime
+    ports:
+      - "8200:8200"
+
+  vault-init:
+    image: hashicorp/vault:1.17
+    container_name: eventzen-vault-init
+    restart: "no"
+    environment:
+      VAULT_ADDR: http://vault:8200
+      VAULT_TOKEN: root
+    command: ["sh", "/vault/scripts/bootstrap-vault.sh"]
+    volumes:
+      - ./vault/scripts:/vault/scripts:ro
+      - vault_runtime:/vault/runtime
+    depends_on:
+      vault:
+        condition: service_healthy
+
+  vault-agent-auth-service:
+    image: hashicorp/vault:1.17
+    container_name: eventzen-vault-agent-auth-service
+    restart: unless-stopped
+    user: "0:0"
+    cap_add:
+      - IPC_LOCK
+    environment:
+      VAULT_ADDR: http://vault:8200
+    command: ["sh", "/vault/scripts/start-agent-with-wrap.sh", "auth-service", "/vault/agent/auth-service.hcl"]
+    volumes:
+      - ./vault/agent:/vault/agent:ro
+      - ./vault/scripts:/vault/scripts:ro
+      - vault_runtime:/vault/runtime
+    depends_on:
+      vault-init:
+        condition: service_completed_successfully
+
+  vault-agent-payment-service:
+    image: hashicorp/vault:1.17
+    container_name: eventzen-vault-agent-payment-service
+    restart: unless-stopped
+    user: "0:0"
+    cap_add:
+      - IPC_LOCK
+    environment:
+      VAULT_ADDR: http://vault:8200
+    command: ["sh", "/vault/scripts/start-agent-with-wrap.sh", "payment-service", "/vault/agent/payment-service.hcl"]
+    volumes:
+      - ./vault/agent:/vault/agent:ro
+      - ./vault/scripts:/vault/scripts:ro
+      - vault_runtime:/vault/runtime
+    depends_on:
+      vault-init:
+        condition: service_completed_successfully
+
+  vault-agent-event-service:
+    image: hashicorp/vault:1.17
+    container_name: eventzen-vault-agent-event-service
+    restart: unless-stopped
+    user: "0:0"
+    cap_add:
+      - IPC_LOCK
+    environment:
+      VAULT_ADDR: http://vault:8200
+    command: ["sh", "/vault/scripts/start-agent-with-wrap.sh", "event-service", "/vault/agent/event-service.hcl"]
+    volumes:
+      - ./vault/agent:/vault/agent:ro
+      - ./vault/scripts:/vault/scripts:ro
+      - vault_runtime:/vault/runtime
+    depends_on:
+      vault-init:
+        condition: service_completed_successfully
+
+  vault-agent-budget-service:
+    image: hashicorp/vault:1.17
+    container_name: eventzen-vault-agent-budget-service
+    restart: unless-stopped
+    user: "0:0"
+    cap_add:
+      - IPC_LOCK
+    environment:
+      VAULT_ADDR: http://vault:8200
+    command: ["sh", "/vault/scripts/start-agent-with-wrap.sh", "budget-service", "/vault/agent/budget-service.hcl"]
+    volumes:
+      - ./vault/agent:/vault/agent:ro
+      - ./vault/scripts:/vault/scripts:ro
+      - vault_runtime:/vault/runtime
+    depends_on:
+      vault-init:
+        condition: service_completed_successfully
+
+  vault-agent-booking-service:
+    image: hashicorp/vault:1.17
+    container_name: eventzen-vault-agent-booking-service
+    restart: unless-stopped
+    user: "0:0"
+    cap_add:
+      - IPC_LOCK
+    environment:
+      VAULT_ADDR: http://vault:8200
+    command: ["sh", "/vault/scripts/start-agent-with-wrap.sh", "booking-service", "/vault/agent/booking-service.hcl"]
+    volumes:
+      - ./vault/agent:/vault/agent:ro
+      - ./vault/scripts:/vault/scripts:ro
+      - vault_runtime:/vault/runtime
+    depends_on:
+      vault-init:
+        condition: service_completed_successfully
+
+  vault-agent-notification-service:
+    image: hashicorp/vault:1.17
+    container_name: eventzen-vault-agent-notification-service
+    restart: unless-stopped
+    user: "0:0"
+    cap_add:
+      - IPC_LOCK
+    environment:
+      VAULT_ADDR: http://vault:8200
+    command: ["sh", "/vault/scripts/start-agent-with-wrap.sh", "notification-service", "/vault/agent/notification-service.hcl"]
+    volumes:
+      - ./vault/agent:/vault/agent:ro
+      - ./vault/scripts:/vault/scripts:ro
+      - vault_runtime:/vault/runtime
+    depends_on:
+      vault-init:
+        condition: service_completed_successfully
+
+  vault-agent-api-gateway:
+    image: hashicorp/vault:1.17
+    container_name: eventzen-vault-agent-api-gateway
+    restart: unless-stopped
+    user: "0:0"
+    cap_add:
+      - IPC_LOCK
+    environment:
+      VAULT_ADDR: http://vault:8200
+    command: ["sh", "/vault/scripts/start-agent-with-wrap.sh", "api-gateway", "/vault/agent/api-gateway.hcl"]
+    volumes:
+      - ./vault/agent:/vault/agent:ro
+      - ./vault/scripts:/vault/scripts:ro
+      - vault_runtime:/vault/runtime
+    depends_on:
+      vault-init:
+        condition: service_completed_successfully
+
+  vault-agent-grafana:
+    image: hashicorp/vault:1.17
+    container_name: eventzen-vault-agent-grafana
+    profiles: [ "monitoring" ]
+    restart: unless-stopped
+    user: "0:0"
+    cap_add:
+      - IPC_LOCK
+    environment:
+      VAULT_ADDR: http://vault:8200
+    command: ["sh", "/vault/scripts/start-agent-with-wrap.sh", "grafana", "/vault/agent/grafana.hcl"]
+    volumes:
+      - ./vault/agent:/vault/agent:ro
+      - ./vault/scripts:/vault/scripts:ro
+      - vault_runtime:/vault/runtime
+    depends_on:
+      vault-init:
+        condition: service_completed_successfully
+
   kafka:
     image: confluentinc/cp-kafka:7.6.1
     container_name: eventzen-kafka
@@ -29,9 +212,6 @@ services:
     container_name: eventzen-auth-service
     restart: unless-stopped
     environment:
-      MONGODB_URI: "${MONGO_ATLAS_URI:?Set MONGO_ATLAS_URI in root .env}"
-      JWT_SECRET: "${JWT_SECRET:?Set JWT_SECRET in root .env}"
-      JWT_REFRESH_SECRET: "${JWT_REFRESH_SECRET:?Set JWT_REFRESH_SECRET in root .env}"
       JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-1d}
       JWT_REFRESH_EXPIRES_IN: ${JWT_REFRESH_EXPIRES_IN:-1h}
       JWT_PASSWORD_RESET_EXPIRES_IN: ${JWT_PASSWORD_RESET_EXPIRES_IN:-15m}
@@ -40,19 +220,20 @@ services:
       CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:5173,http://192.168.0.244:5173}
       EVENT_SERVICE_URL: http://event-service:8080
       KAFKA_BROKER: kafka:9092
+      INTERNAL_CALLER_NAME: auth-service
+      INTERNAL_SIGNATURE_TTL_MS: ${INTERNAL_SIGNATURE_TTL_MS:-60000}
       # SMTP (Nodemailer)
       SMTP_HOST: ${SMTP_HOST:-smtp.gmail.com}
       SMTP_PORT: ${SMTP_PORT:-587}
-      SMTP_USER: "${SMTP_USER:?Set SMTP_USER in root .env}"
-      SMTP_PASS: "${SMTP_PASS:?Set SMTP_PASS in root .env}"
-      SMTP_FROM: "${SMTP_FROM:-${SMTP_USER}}"
-      # Cloudinary
-      CLOUDINARY_CLOUD_NAME: "${CLOUDINARY_CLOUD_NAME:?Set CLOUDINARY_CLOUD_NAME in root .env}"
-      CLOUDINARY_API_KEY: "${CLOUDINARY_API_KEY:?Set CLOUDINARY_API_KEY in root .env}"
-      CLOUDINARY_API_SECRET: "${CLOUDINARY_API_SECRET:?Set CLOUDINARY_API_SECRET in root .env}"
+    command: ["sh", "/vault/scripts/start-service-with-runtime-env.sh", "auth-service", "npm", "start"]
+    volumes:
+      - vault_runtime:/vault/runtime:ro
+      - ./vault/scripts:/vault/scripts:ro
     expose:
       - "3001"
     depends_on:
+      vault-agent-auth-service:
+        condition: service_started
       kafka:
         condition: service_started
 
@@ -62,18 +243,24 @@ services:
     container_name: eventzen-event-service
     restart: unless-stopped
     environment:
-      MONGO_URI: "${MONGO_ATLAS_URI:?Set MONGO_ATLAS_URI in root .env}"
       MONGO_DATABASE: ${MONGO_DATABASE:-eventzen}
       SERVER_PORT: 8080
       LOG_LEVEL: ${LOG_LEVEL:-INFO}
-      # Groq AI
-      GROQ_API_KEY: "${GROQ_API_KEY:?Set GROQ_API_KEY in root .env}"
       GROQ_MODEL: ${GROQ_MODEL:-llama-3.3-70b-versatile}
       KAFKA_BROKER: kafka:9092
       BOOKING_SERVICE_URL: http://booking-service:5000
+      INTERNAL_CALLER_NAME: event-service
+      INTERNAL_SIGNATURE_TTL_MS: ${INTERNAL_SIGNATURE_TTL_MS:-60000}
+    entrypoint: ["sh"]
+    command: ["/vault/scripts/start-service-with-runtime-env.sh", "event-service", "java", "-jar", "app.jar"]
+    volumes:
+      - vault_runtime:/vault/runtime:ro
+      - ./vault/scripts:/vault/scripts:ro
     expose:
       - "8080"
     depends_on:
+      vault-agent-event-service:
+        condition: service_started
       kafka:
         condition: service_started
 
@@ -81,36 +268,50 @@ services:
     build:
       context: ./backend/budget-service
     container_name: eventzen-budget-service
+    entrypoint: ["sh"]
+    command: ["/vault/scripts/start-service-with-runtime-env.sh", "budget-service", "java", "-jar", "app.jar"]
     restart: unless-stopped
     environment:
-      MONGO_URI: "${MONGO_ATLAS_URI:?Set MONGO_ATLAS_URI in root .env}"
       MONGO_DATABASE: ${MONGO_DATABASE:-eventzen}
       SERVER_PORT: 8081
       EVENT_SERVICE_BASE_URL: http://event-service:8080
       KAFKA_BROKER: kafka:9092
+      INTERNAL_CALLER_NAME: budget-service
+      INTERNAL_SIGNATURE_TTL_MS: ${INTERNAL_SIGNATURE_TTL_MS:-60000}
+    volumes:
+      - vault_runtime:/vault/runtime:ro
+      - ./vault/scripts:/vault/scripts:ro
     expose:
       - "8081"
+    depends_on:
+      vault-agent-budget-service:
+        condition: service_started
 
   booking-service:
     build:
       context: ./backend/booking-service
     container_name: eventzen-booking-service
+    entrypoint: ["sh"]
+    command: ["/vault/scripts/start-service-with-runtime-env.sh", "booking-service", "dotnet", "BookingService.dll"]
     restart: unless-stopped
     environment:
       ASPNETCORE_URLS: http://+:5000
-      MongoDbSettings__ConnectionString: "${MONGO_ATLAS_URI:?Set MONGO_ATLAS_URI in root .env}"
       MongoDbSettings__DatabaseName: ${MONGO_DATABASE:-test}
       EventServiceBaseUrl: http://event-service:8080
       AuthServiceBaseUrl: http://auth-service:3001
       KAFKA_BROKER: kafka:9092
+      INTERNAL_CALLER_NAME: booking-service
+      INTERNAL_SIGNATURE_TTL_MS: ${INTERNAL_SIGNATURE_TTL_MS:-60000}
       # SMTP (MailKit)
       SmtpSettings__Host: ${SMTP_HOST:-smtp.gmail.com}
       SmtpSettings__Port: ${SMTP_PORT:-587}
-      SmtpSettings__User: "${SMTP_USER:?Set SMTP_USER in root .env}"
-      SmtpSettings__Password: "${SMTP_PASS:?Set SMTP_PASS in root .env}"
-      SmtpSettings__From: "${SMTP_FROM:-${SMTP_USER}}"
       SmtpSettings__DisplayName: ${SMTP_DISPLAY_NAME:-EventZen}
+    volumes:
+      - vault_runtime:/vault/runtime:ro
+      - ./vault/scripts:/vault/scripts:ro
     depends_on:
+      vault-agent-booking-service:
+        condition: service_started
       auth-service:
         condition: service_started
       event-service:
@@ -130,11 +331,16 @@ services:
       EVENT_SERVICE_URL: http://event-service:8080
       PAYMENT_CURRENCY: ${PAYMENT_CURRENCY:-INR}
       CONVENIENCE_FEE_PERCENT: ${CONVENIENCE_FEE_PERCENT:-0}
-      MONGODB_URI: "${MONGO_ATLAS_URI:?Set MONGO_ATLAS_URI in root .env}"
-      RAZORPAY_KEY_ID: "${RAZORPAY_KEY_ID:?Set RAZORPAY_KEY_ID in root .env}"
-      RAZORPAY_KEY_SECRET: "${RAZORPAY_KEY_SECRET:?Set RAZORPAY_KEY_SECRET in root .env}"
       KAFKA_BROKER: kafka:9092
+      INTERNAL_CALLER_NAME: payment-service
+      INTERNAL_SIGNATURE_TTL_MS: ${INTERNAL_SIGNATURE_TTL_MS:-60000}
+    command: ["sh", "/vault/scripts/start-service-with-runtime-env.sh", "payment-service", "npm", "start"]
+    volumes:
+      - vault_runtime:/vault/runtime:ro
+      - ./vault/scripts:/vault/scripts:ro
     depends_on:
+      vault-agent-payment-service:
+        condition: service_started
       event-service:
         condition: service_started
       kafka:
@@ -149,11 +355,18 @@ services:
     restart: unless-stopped
     environment:
       PORT: 3003
-      MONGODB_URI: "${MONGO_ATLAS_URI:?Set MONGO_ATLAS_URI in root .env}"
       KAFKA_BROKER: kafka:9092
       KAFKA_CONSUMER_GROUP: eventzen-notification-consumer-group
       KAFKA_CONNECT_RETRY_MS: 5000
+      INTERNAL_CALLER_NAME: notification-service
+      INTERNAL_SIGNATURE_TTL_MS: ${INTERNAL_SIGNATURE_TTL_MS:-60000}
+    command: ["sh", "/vault/scripts/start-service-with-runtime-env.sh", "notification-service", "npm", "start"]
+    volumes:
+      - vault_runtime:/vault/runtime:ro
+      - ./vault/scripts:/vault/scripts:ro
     depends_on:
+      vault-agent-notification-service:
+        condition: service_started
       kafka:
         condition: service_started
     expose:
@@ -168,7 +381,6 @@ services:
       PORT: 3000
       FRONTEND_URL: ${FRONTEND_URL:-http://localhost:5173}
       CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:5173,http://192.168.0.244:5173}
-      JWT_SECRET: "${JWT_SECRET:?Set JWT_SECRET in root .env}"
       AUTH_SERVICE_URL: http://auth-service:3001
       EVENT_SERVICE_URL: http://event-service:8080
       BOOKING_SERVICE_URL: http://booking-service:5000
@@ -178,7 +390,15 @@ services:
       AUTH_RATE_LIMIT_WINDOW_MS: ${AUTH_RATE_LIMIT_WINDOW_MS:-900000}
       AUTH_RATE_LIMIT_MAX_ATTEMPTS: ${AUTH_RATE_LIMIT_MAX_ATTEMPTS:-10}
       AUTH_OTP_RATE_LIMIT_MAX_ATTEMPTS: ${AUTH_OTP_RATE_LIMIT_MAX_ATTEMPTS:-5}
+      INTERNAL_CALLER_NAME: api-gateway
+      INTERNAL_SIGNATURE_TTL_MS: ${INTERNAL_SIGNATURE_TTL_MS:-60000}
+    command: ["sh", "/vault/scripts/start-service-with-runtime-env.sh", "api-gateway", "npm", "start"]
+    volumes:
+      - vault_runtime:/vault/runtime:ro
+      - ./vault/scripts:/vault/scripts:ro
     depends_on:
+      vault-agent-api-gateway:
+        condition: service_started
       auth-service:
         condition: service_started
       event-service:
@@ -242,20 +462,27 @@ services:
     container_name: eventzen-grafana
     profiles: [ "monitoring" ]
     depends_on:
+      vault-agent-grafana:
+        condition: service_started
       prometheus:
         condition: service_started
     environment:
       GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
-      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin}
       GF_USERS_ALLOW_SIGN_UP: "false"
+    entrypoint: ["/bin/sh"]
+    command: ["/vault/scripts/start-service-with-runtime-env.sh", "grafana", "/run.sh"]
     volumes:
       - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
       - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro
       - grafana_data:/var/lib/grafana
+      - vault_runtime:/vault/runtime:ro
+      - ./vault/scripts:/vault/scripts:ro
     ports:
       - "3100:3000"
     restart: unless-stopped
 
 volumes:
+  vault_data:
+  vault_runtime:
   prometheus_data:
   grafana_data:

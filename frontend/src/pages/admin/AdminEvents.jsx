@@ -1,5 +1,7 @@
 import { Suspense, lazy } from "react";
+import { motion } from "framer-motion";
 
+import { Footer } from "@/components/layout/Footer";
 import { AdminEventCard } from "@/pages/admin/components/events/AdminEventCard";
 import { AdminEventsToolbar } from "@/pages/admin/components/events/AdminEventsToolbar";
 import { ApprovalQueue } from "@/pages/admin/components/events/ApprovalQueue";
@@ -55,30 +57,49 @@ export default function AdminEvents() {
   } = page;
 
   return (
-    <div className="relative flex min-h-screen w-full flex-col">
-      <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col px-4 py-8">
-        <div className="mb-6 flex flex-col gap-2">
-          <h1 className="text-3xl font-bold text-slate-900">{isAdmin ? "Event Management" : "My Event Requests"}</h1>
-          <p className="text-slate-500">
+    <div className="relative flex min-h-screen w-full flex-col overflow-hidden">
+      <div className="soft-orb left-[-5rem] top-20 h-48 w-48 bg-sky-300/20" />
+      <div className="soft-orb right-[-4rem] top-36 h-44 w-44 bg-indigo-200/25" style={{ animationDelay: "1.1s" }} />
+
+      <main className="page-shell flex-1">
+        <motion.div
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.45, ease: "easeOut" }}
+          className="mb-6 rounded-3xl border border-white/70 bg-gradient-to-r from-slate-900 via-slate-800 to-sky-900 px-6 py-7 text-slate-100 shadow-[0_24px_64px_-34px_rgba(15,23,42,0.6)] sm:px-8"
+        >
+          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-300">
+            {isAdmin ? "Administration" : "Vendor Portal"}
+          </p>
+          <h1 className="mt-2 text-4xl font-semibold leading-tight" style={{ fontFamily: "var(--font-serif)" }}>
+            {isAdmin ? "Event Management" : "My Event Requests"}
+          </h1>
+          <p className="mt-2 max-w-2xl text-sm text-slate-300 sm:text-base">
             {isAdmin
               ? "Review pending requests, approve or reject them, and manage published events."
               : "Create event requests, track approval status, and update your submissions."}
           </p>
-        </div>
+        </motion.div>
 
-        <AdminEventsToolbar
-          eventCounts={eventCounts}
-          onCreate={openCreateDialog}
-          onSearchChange={actions.handleSearchChange}
-          onStatusChange={actions.handleStatusChange}
-          searchTerm={searchTerm}
-          statusFilter={statusFilter}
-        />
+        <motion.div
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, delay: 0.08, ease: "easeOut" }}
+        >
+          <AdminEventsToolbar
+            eventCounts={eventCounts}
+            onCreate={openCreateDialog}
+            onSearchChange={actions.handleSearchChange}
+            onStatusChange={actions.handleStatusChange}
+            searchTerm={searchTerm}
+            statusFilter={statusFilter}
+          />
+        </motion.div>
 
         {loadError ? (
-          <div role="alert" className="mb-6 rounded-lg border border-red-300 bg-red-100 p-4 text-sm text-red-900">
+          <div role="alert" className="mb-6 rounded-xl border border-red-300/70 bg-red-100/90 p-4 text-sm text-red-900 shadow-sm">
             <p>{loadError}</p>
-            <button type="button" onClick={loadData} className="mt-2 font-semibold underline">Retry</button>
+            <button type="button" onClick={loadData} className="focus-polish mt-2 text-sm font-semibold underline">Retry</button>
           </div>
         ) : null}
 
@@ -92,12 +113,17 @@ export default function AdminEvents() {
         ) : null}
 
         {isLoading ? (
-          <div role="status" aria-live="polite" className="rounded-lg border border-slate-200 bg-white p-6 text-center text-slate-500">
+          <div role="status" aria-live="polite" className="rounded-xl border border-slate-200 bg-white/80 p-6 text-center text-slate-500 backdrop-blur">
             Loading events...
           </div>
         ) : (
           <>
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.35, delay: 0.12, ease: "easeOut" }}
+              className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3"
+            >
               {events.map((event) => (
                 <AdminEventCard
                   key={event.id}
@@ -116,11 +142,11 @@ export default function AdminEvents() {
               ))}
 
               {events.length === 0 ? (
-                <div className="rounded-lg border border-slate-200 bg-white p-6 text-center text-slate-500 md:col-span-2 lg:col-span-3">
+                <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50/50 p-8 text-center text-slate-500 md:col-span-2 lg:col-span-3">
                   No events found for this filter.
                 </div>
               ) : null}
-            </div>
+            </motion.div>
 
             <EventPaginationControls
               isLoading={isLoading}
@@ -183,6 +209,9 @@ export default function AdminEvents() {
           />
         </Suspense>
       </main>
+
+      <Footer />
     </div>
   );
 }
+

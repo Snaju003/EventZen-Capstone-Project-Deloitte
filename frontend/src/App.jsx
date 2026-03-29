@@ -26,6 +26,7 @@ const AdminAttendees = lazy(() => import("@/pages/admin/AdminAttendees"));
 const AdminBudget = lazy(() => import("@/pages/admin/AdminBudget"));
 const VendorCheckIn = lazy(() => import("@/pages/vendor/VendorCheckIn"));
 const NotificationsPage = lazy(() => import("@/pages/notifications/NotificationsPage"));
+const NotFoundPage = lazy(() => import("@/pages/NotFoundPage"));
 
 function App() {
   const location = useLocation();
@@ -69,7 +70,7 @@ function App() {
               <Route path='/admin/budget/:eventId' element={<ProtectedRoute><RoleRoute allowedRoles={["admin", "vendor"]}><AdminBudget /></RoleRoute></ProtectedRoute>} />
               <Route path='/vendor/check-in/:eventId' element={<ProtectedRoute><RoleRoute allowedRoles={["admin", "vendor"]}><VendorCheckIn /></RoleRoute></ProtectedRoute>} />
               <Route path='/admin/*' element={<ProtectedRoute><RoleRoute allowedRoles={["admin", "vendor"]}><Navigate to='/admin/dashboard' replace /></RoleRoute></ProtectedRoute>} />
-              <Route path='*' element={<Navigate to='/' replace />} />
+              <Route path='*' element={<NotFoundPage />} />
             </Routes>
           </motion.div>
         </AnimatePresence>

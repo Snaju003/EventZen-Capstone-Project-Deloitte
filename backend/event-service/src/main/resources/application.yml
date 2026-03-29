@@ -20,6 +20,15 @@ groq:
 booking-service:
   url: ${BOOKING_SERVICE_URL:http://booking-service:5000}
 
+internal-service:
+  secret: ${INTERNAL_SERVICE_SECRET:}
+
+internal-signature:
+  ttl-ms: ${INTERNAL_SIGNATURE_TTL_MS:60000}
+
+internal-caller:
+  name: ${INTERNAL_CALLER_NAME:event-service}
+
 management:
   endpoints:
     web:

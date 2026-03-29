@@ -1,4 +1,6 @@
 using System.Net.Http.Json;
+using System.Security.Cryptography;
+using System.Text;
 using System.Text.Json;
 
 namespace BookingService.Services;
@@ -46,6 +48,7 @@ public class AuthServiceClient
             {
                 Content = JsonContent.Create(new { userIds = idList }),
             };
+            AddInternalSecurityHeaders(request);
 
             using var response = await _client.SendAsync(request);
             if (!response.IsSuccessStatusCode)
@@ -64,6 +67,39 @@ public class AuthServiceClient
         {
             return new Dictionary<string, AuthUserDto>(StringComparer.Ordinal);
         }
+    }
+
+    private static void AddInternalSecurityHeaders(HttpRequestMessage request)
+    {
+        var secret = Environment.GetEnvironmentVariable("INTERNAL_SERVICE_SECRET")?.Trim();
+        if (string.IsNullOrWhiteSpace(secret))
+        {
+            return;
+        }
+
+        var timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds().ToString();
+        var service = Environment.GetEnvironmentVariable("INTERNAL_CALLER_NAME")?.Trim();
+        if (string.IsNullOrWhiteSpace(service))
+        {
+            service = "booking-service";
+        }
+
+        var method = request.Method.Method.ToUpperInvariant();
+        var path = request.RequestUri?.PathAndQuery;
+        if (string.IsNullOrWhiteSpace(path))
+        {
+            path = "/";
+        }
+
+        var payload = $"{timestamp}.{method}.{path}.{service}";
+        using var hmac = new HMACSHA256(Encoding.UTF8.GetBytes(secret));
+        var signatureBytes = hmac.ComputeHash(Encoding.UTF8.GetBytes(payload));
+        var signature = Convert.ToHexString(signatureBytes).ToLowerInvariant();
+
+        request.Headers.TryAddWithoutValidation("X-Internal-Secret", secret);
+        request.Headers.TryAddWithoutValidation("X-Internal-Timestamp", timestamp);
+        request.Headers.TryAddWithoutValidation("X-Internal-Service", service);
+        request.Headers.TryAddWithoutValidation("X-Internal-Signature", signature);
     }
 
     public async Task<AuthUserDto?> GetUserByIdAsync(string userId)

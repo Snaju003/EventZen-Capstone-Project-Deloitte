@@ -7,7 +7,7 @@ const express = require("express");
 const { createProxyMiddleware } = require("http-proxy-middleware");
 const proxyConfig = require("../config/proxy.config");
 const { handleProxyError } = require("../utils/errorHandler");
-const { logProxyRequest } = require("../utils/proxyHelpers");
+const { logProxyRequest, setInternalSecurityHeaders } = require("../utils/proxyHelpers");
 
 const router = express.Router();
 
@@ -24,6 +24,7 @@ const proxy = createProxyMiddleware({
   on: {
     error: handleProxyError("Auth Service"),
     proxyReq: (proxyReq, req) => {
+      setInternalSecurityHeaders(proxyReq, req, { path: proxyReq.path });
       logProxyRequest(req, proxyConfig.authService.target, req.originalUrl);
     },
   },

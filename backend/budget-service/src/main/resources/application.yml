@@ -10,6 +10,15 @@ server:
 event-service:
   base-url: ${EVENT_SERVICE_BASE_URL:http://localhost:8080}
 
+internal-service:
+  secret: ${INTERNAL_SERVICE_SECRET:}
+
+internal-signature:
+  ttl-ms: ${INTERNAL_SIGNATURE_TTL_MS:60000}
+
+internal-caller:
+  name: ${INTERNAL_CALLER_NAME:budget-service}
+
 management:
   endpoints:
     web:

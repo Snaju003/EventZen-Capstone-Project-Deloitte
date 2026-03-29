@@ -1,5 +1,27 @@
 const { createHttpError } = require("../utils/httpError");
 const { hasText } = require("../utils/text");
+const crypto = require("crypto");
+
+function buildInternalHeaders({ method, path }) {
+  const secret = String(process.env.INTERNAL_SERVICE_SECRET || "").trim();
+  if (!secret) {
+    return {};
+  }
+
+  const timestamp = Date.now().toString();
+  const service = String(process.env.INTERNAL_CALLER_NAME || "payment-service").trim() || "payment-service";
+  const signature = crypto
+    .createHmac("sha256", secret)
+    .update(`${timestamp}.${method}.${path}.${service}`)
+    .digest("hex");
+
+  return {
+    "X-Internal-Secret": secret,
+    "X-Internal-Timestamp": timestamp,
+    "X-Internal-Service": service,
+    "X-Internal-Signature": signature,
+  };
+}
 
 async function fetchEventById(eventId) {
   if (!hasText(eventId)) {
@@ -7,9 +29,14 @@ async function fetchEventById(eventId) {
   }
 
   const baseUrl = (process.env.EVENT_SERVICE_URL || "http://localhost:8080").replace(/\/$/, "");
+  const endpoint = `${baseUrl}/events/${encodeURIComponent(eventId)}`;
+  const endpointUrl = new URL(endpoint);
+  const method = "GET";
+  const path = `${endpointUrl.pathname}${endpointUrl.search}` || "/";
 
-  const response = await fetch(`${baseUrl}/events/${encodeURIComponent(eventId)}`, {
-    method: "GET",
+  const response = await fetch(endpoint, {
+    method,
+    headers: buildInternalHeaders({ method, path }),
   });
 
   if (response.status === 404) {
