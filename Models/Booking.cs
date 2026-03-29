@@ -18,6 +18,14 @@ public class Booking
     [BsonElement("seat_count")]
     public int SeatCount { get; set; }
 
+    [BsonElement("ticket_type_id")]
+    [BsonIgnoreIfNull]
+    public string? TicketTypeId { get; set; }
+
+    [BsonElement("ticket_type_name")]
+    [BsonIgnoreIfNull]
+    public string? TicketTypeName { get; set; }
+
     [BsonElement("status")]
     public string Status { get; set; } = BookingStatuses.Confirmed;
 

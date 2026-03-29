@@ -9,4 +9,8 @@ public class CreateBookingDto
 
     [Range(1,10)]
     public int SeatCount { get; set; }
+
+    public string? TicketTypeId { get; set; }
+
+    public string? TicketTypeName { get; set; }
 }

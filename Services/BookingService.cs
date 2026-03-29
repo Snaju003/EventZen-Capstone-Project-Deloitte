@@ -10,6 +10,7 @@ public class BookingService : IBookingService
     private readonly EventServiceClient _eventClient;
     private readonly AuthServiceClient _authClient;
     private readonly IEmailService _emailService;
+    private readonly IKafkaProducerService _kafkaProducerService;
     private readonly ILogger<BookingService> _logger;
 
     public BookingService(
@@ -17,12 +18,14 @@ public class BookingService : IBookingService
         EventServiceClient eventClient,
         AuthServiceClient authClient,
         IEmailService emailService,
+        IKafkaProducerService kafkaProducerService,
         ILogger<BookingService> logger)
     {
         _repo = repo;
         _eventClient = eventClient;
         _authClient = authClient;
         _emailService = emailService;
+        _kafkaProducerService = kafkaProducerService;
         _logger = logger;
     }
 
@@ -44,11 +47,38 @@ public class BookingService : IBookingService
             UserId = userId,
             EventId = dto.EventId,
             SeatCount = dto.SeatCount,
+            TicketTypeId = dto.TicketTypeId,
+            TicketTypeName = dto.TicketTypeName,
             Status = BookingStatuses.Confirmed,
             BookedAt = DateTime.UtcNow
         };
 
         var created = await _repo.CreateAsync(booking);
+
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                var published = await _kafkaProducerService.PublishNotificationEventAsync("booking.confirmed", new
+                {
+                    userId = created.UserId,
+                    eventId = created.EventId,
+                    eventTitle = eventDetails.Title,
+                    bookingId = created.Id,
+                });
+
+                if (!published)
+                {
+                    _logger.LogWarning("Kafka event {EventType} was not published for booking {BookingId}", "booking.confirmed", created.Id);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex,
+                    "Error in fire-and-forget kafka publish for booking.confirmed, booking {BookingId}",
+                    created.Id);
+            }
+        });
 
         // Fire-and-forget: send booking confirmation email
         _ = Task.Run(async () =>
@@ -106,6 +136,32 @@ public class BookingService : IBookingService
             return Failure("Bookings can only be cancelled before the event starts", 409);
 
         await _repo.CancelAsync(bookingId);
+
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                var published = await _kafkaProducerService.PublishNotificationEventAsync("booking.cancelled", new
+                {
+                    userId = booking.UserId,
+                    eventId = booking.EventId,
+                    eventTitle = eventDetails.Title,
+                    bookingId = booking.Id,
+                });
+
+                if (!published)
+                {
+                    _logger.LogWarning("Kafka event {EventType} was not published for booking {BookingId}", "booking.cancelled", booking.Id);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex,
+                    "Error in fire-and-forget kafka publish for booking.cancelled, booking {BookingId}",
+                    booking.Id);
+            }
+        });
+
         return (true, null, 200);
     }
 
@@ -117,6 +173,34 @@ public class BookingService : IBookingService
         if (booking.Status == BookingStatuses.Cancelled) return Failure("Already cancelled", 400);
 
         await _repo.CancelAsync(bookingId);
+
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                var eventDetails = await _eventClient.GetEventAsync(booking.EventId);
+
+                var published = await _kafkaProducerService.PublishNotificationEventAsync("booking.admin-cancelled", new
+                {
+                    userId = booking.UserId,
+                    eventId = booking.EventId,
+                    eventTitle = eventDetails?.Title ?? "Event",
+                    bookingId = booking.Id,
+                });
+
+                if (!published)
+                {
+                    _logger.LogWarning("Kafka event {EventType} was not published for booking {BookingId}", "booking.admin-cancelled", booking.Id);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex,
+                    "Error in fire-and-forget kafka publish for booking.admin-cancelled, booking {BookingId}",
+                    booking.Id);
+            }
+        });
+
         return (true, null, 200);
     }
 
@@ -142,6 +226,34 @@ public class BookingService : IBookingService
         var updated = await _repo.CheckInAsync(bookingId, vendorUserId);
         if (!updated)
             return (false, "Check-in failed — ticket may have already been scanned", 409, null);
+
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                var eventDetails = await _eventClient.GetEventAsync(eventId);
+
+                var published = await _kafkaProducerService.PublishNotificationEventAsync("booking.checked-in", new
+                {
+                    userId = booking.UserId,
+                    eventId = booking.EventId,
+                    eventTitle = eventDetails?.Title ?? "Event",
+                    bookingId = booking.Id,
+                    checkedInBy = vendorUserId,
+                });
+
+                if (!published)
+                {
+                    _logger.LogWarning("Kafka event {EventType} was not published for booking {BookingId}", "booking.checked-in", booking.Id);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex,
+                    "Error in fire-and-forget kafka publish for booking.checked-in, booking {BookingId}",
+                    booking.Id);
+            }
+        });
 
         // Fetch attendee name for the vendor's scanner success screen
         var user = await _authClient.GetUserByIdAsync(booking.UserId);
@@ -178,6 +290,19 @@ public class BookingService : IBookingService
         }).ToList();
     }
 
+    public async Task<List<InternalAttendeeListResponseDto>> GetEventAttendeeUsersInternalAsync(string eventId)
+    {
+        var bookings = await _repo.GetByEventIdAsync(eventId);
+
+        return bookings.Select(booking => new InternalAttendeeListResponseDto
+        {
+            BookingId = booking.Id,
+            UserId = booking.UserId,
+            EventId = booking.EventId,
+            Status = booking.Status,
+        }).ToList();
+    }
+
     public async Task<int> GetEventSeatCountAsync(string eventId)
     {
         return await _repo.GetConfirmedSeatCountAsync(eventId);
@@ -205,6 +330,8 @@ public class BookingService : IBookingService
             Id = booking.Id,
             EventId = booking.EventId,
             SeatCount = booking.SeatCount,
+            TicketTypeId = booking.TicketTypeId,
+            TicketTypeName = booking.TicketTypeName,
             Status = booking.Status,
             BookedAt = booking.BookedAt,
         };

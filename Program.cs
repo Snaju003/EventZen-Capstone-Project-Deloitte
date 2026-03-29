@@ -29,6 +29,7 @@ builder.Services.AddHttpClient<AuthServiceClient>(client =>
 
 builder.Services.AddSingleton<IBookingRepository, BookingRepository>();
 builder.Services.AddScoped<IBookingService, global::BookingService.Services.BookingService>();
+builder.Services.AddSingleton<IKafkaProducerService, KafkaProducerService>();
 
 builder.Services.Configure<SmtpSettings>(
     builder.Configuration.GetSection("SmtpSettings"));

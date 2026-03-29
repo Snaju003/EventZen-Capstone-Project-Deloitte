@@ -61,6 +61,19 @@ public class BookingsController : ControllerBase
         return Ok(attendees);
     }
 
+    [HttpGet("event/{eventId}/users-internal")]
+    public async Task<IActionResult> GetAttendeeUsersInternal(string eventId)
+    {
+        var requesterId = UserId;
+        if (requesterId != "notification-service")
+        {
+            return StatusCode(403, new { error = "Forbidden" });
+        }
+
+        var attendees = await _service.GetEventAttendeeUsersInternalAsync(eventId);
+        return Ok(attendees);
+    }
+
     [HttpGet("event/{eventId}/count")]
     public async Task<IActionResult> GetSeatCount(string eventId)
     {
