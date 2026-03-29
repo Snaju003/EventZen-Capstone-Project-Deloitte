@@ -18,13 +18,30 @@ async function createPaymentOrder({ user, body, currency, razorpayKeyId, fetchEv
 
   const eventId = readText(body?.eventId);
   const seatCount = sanitizeSeatCount(body?.seatCount);
+  const ticketTypeId = readText(body?.ticketTypeId);
 
   if (!hasText(eventId) || !seatCount) {
     throw createHttpError(400, "eventId and a valid seatCount are required");
   }
 
   const event = await fetchEventById(eventId);
-  const ticketPrice = Number(event?.ticketPrice);
+
+  // Resolve ticket price from ticket types or fallback to flat ticketPrice
+  let ticketPrice;
+  let ticketTypeName = "";
+  const ticketTypes = Array.isArray(event?.ticketTypes) ? event.ticketTypes : [];
+
+  if (ticketTypeId && ticketTypes.length > 0) {
+    const matchedType = ticketTypes.find((tt) => tt.id === ticketTypeId);
+    if (!matchedType) {
+      throw createHttpError(400, "Invalid ticket type selected");
+    }
+    ticketPrice = Number(matchedType.price);
+    ticketTypeName = matchedType.name || "";
+  } else {
+    ticketPrice = Number(event?.ticketPrice);
+  }
+
   if (!Number.isFinite(ticketPrice) || ticketPrice < 0) {
     throw createHttpError(400, "Event ticket price is invalid");
   }
@@ -49,6 +66,8 @@ async function createPaymentOrder({ user, body, currency, razorpayKeyId, fetchEv
       userId: user.id,
       seatCount: String(seatCount),
       ticketPrice: String(ticketPrice),
+      ticketTypeId: ticketTypeId || "",
+      ticketTypeName: ticketTypeName || "",
       convenienceFee: String(convenienceFee),
       convenienceFeePercent: String(CONVENIENCE_FEE_PERCENT),
     },
