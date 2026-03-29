@@ -72,11 +72,12 @@ class EventVendorOperations {
         throw new IllegalArgumentException("Select and approve a vendor before publishing this event.");
     }
 
-    void applyApprovedVendor(Event event, String vendorId) {
+    com.eventzen.eventservice.model.Vendor applyApprovedVendor(Event event, String vendorId) {
         var vendor = vendorRepository.findById(vendorId)
                 .orElseThrow(() -> new ResourceNotFoundException("Vendor", vendorId));
 
         event.setApprovedVendorId(vendorId);
         event.setApprovedVendorUserId(vendor.getUserId());
+        return vendor;
     }
 }

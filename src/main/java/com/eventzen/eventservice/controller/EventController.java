@@ -6,6 +6,7 @@ import com.eventzen.eventservice.dto.EventPageResponse;
 import com.eventzen.eventservice.dto.GenerateDescriptionDTO;
 import com.eventzen.eventservice.dto.InternalEventAccessV1Response;
 import com.eventzen.eventservice.dto.VendorAssignmentDTO;
+import com.eventzen.eventservice.dto.VendorDeclineDTO;
 import com.eventzen.eventservice.exception.ForbiddenException;
 import com.eventzen.eventservice.model.Event;
 import com.eventzen.eventservice.service.EventService;
@@ -176,6 +177,17 @@ public class EventController {
         return ResponseEntity.ok(eventService.cancelEvent(id, userId, role));
     }
 
+    // POST /events/{id}/toggle-registration - admin or vendor
+    @PostMapping("/{id}/toggle-registration")
+    public ResponseEntity<Event> toggleRegistration(
+            @RequestHeader("X-User-Id") String userId,
+            @RequestHeader("X-User-Role") String role,
+            @PathVariable String id) {
+
+        requireAdminOrVendor(role);
+        return ResponseEntity.ok(eventService.toggleRegistration(id, userId, role));
+    }
+
     // POST /events/{id}/vendors - admin only
     @PostMapping("/{id}/vendors")
     public ResponseEntity<Event> addVendor(
@@ -210,6 +222,30 @@ public class EventController {
         return ResponseEntity.ok(eventService.removeVendorFromEvent(id, vendorId, role));
     }
 
+    // POST /events/{id}/vendor-accept - vendor only (vendor confirms assignment)
+    @PostMapping("/{id}/vendor-accept")
+    public ResponseEntity<Event> vendorAcceptEvent(
+            @RequestHeader("X-User-Id") String userId,
+            @RequestHeader("X-User-Role") String role,
+            @PathVariable String id) {
+
+        requireVendor(role);
+        return ResponseEntity.ok(eventService.vendorAcceptEvent(id, userId));
+    }
+
+    // POST /events/{id}/vendor-decline - vendor only (vendor declines assignment)
+    @PostMapping("/{id}/vendor-decline")
+    public ResponseEntity<Event> vendorDeclineEvent(
+            @RequestHeader("X-User-Id") String userId,
+            @RequestHeader("X-User-Role") String role,
+            @PathVariable String id,
+            @RequestBody(required = false) VendorDeclineDTO dto) {
+
+        requireVendor(role);
+        String reason = dto != null ? dto.getReason() : null;
+        return ResponseEntity.ok(eventService.vendorDeclineEvent(id, userId, reason));
+    }
+
     // ─── Helper ────────────────────────────────────────────────────────────────
 
     private void requireAdminOrVendor(String role) {
@@ -221,6 +257,12 @@ public class EventController {
     private void requireAdmin(String role) {
         if (!"admin".equalsIgnoreCase(role)) {
             throw new ForbiddenException("Admin access required");
+        }
+    }
+
+    private void requireVendor(String role) {
+        if (!"vendor".equalsIgnoreCase(role)) {
+            throw new ForbiddenException("Vendor access required");
         }
     }
 }

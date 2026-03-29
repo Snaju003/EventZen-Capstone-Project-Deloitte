@@ -40,7 +40,18 @@ class EventReadOperations {
                 if (requesterId == null || requesterId.isBlank()) {
                     throw new ForbiddenException("Vendor identity is required");
                 }
-                events = eventRepository.findByCreatedBy(requesterId);
+                // Vendors see events they created + events assigned to them (pending_vendor)
+                List<Event> createdEvents = eventRepository.findByCreatedBy(requesterId);
+                List<Event> assignedEvents = eventRepository.findByApprovedVendorUserId(requesterId);
+                // Merge without duplicates
+                java.util.Set<String> seen = new java.util.HashSet<>();
+                events = new ArrayList<>();
+                for (Event e : createdEvents) {
+                    if (seen.add(e.getId())) events.add(e);
+                }
+                for (Event e : assignedEvents) {
+                    if (seen.add(e.getId())) events.add(e);
+                }
             } else {
                 events = eventRepository.findByStatus("published");
             }
@@ -181,6 +192,11 @@ class EventReadOperations {
         }
 
         if ("vendor".equalsIgnoreCase(requesterRole) && Objects.equals(event.getCreatedBy(), requesterId)) {
+            return attachVenue(event);
+        }
+
+        // Vendors can also view events assigned to them
+        if ("vendor".equalsIgnoreCase(requesterRole) && Objects.equals(event.getApprovedVendorUserId(), requesterId)) {
             return attachVenue(event);
         }
 

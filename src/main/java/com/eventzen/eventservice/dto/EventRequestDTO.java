@@ -6,6 +6,8 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.PositiveOrZero;
 import lombok.Data;
 
+import com.eventzen.eventservice.model.TicketType;
+
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -35,5 +37,12 @@ public class EventRequestDTO {
     @PositiveOrZero(message = "Agreed cost must be 0 or greater")
     private Double agreedCost;
 
+    private String vendorId;
+
+    @PositiveOrZero(message = "Total budget must be 0 or greater")
+    private Double totalBudget;
+
     private List<String> imageUrls;
+
+    private List<TicketType> ticketTypes;
 }

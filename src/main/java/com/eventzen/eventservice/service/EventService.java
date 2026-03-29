@@ -23,7 +23,13 @@ public class EventService {
     @Value("${EVENT_MIN_LEAD_HOURS:24}")
     private long eventMinLeadHours;
 
-    public EventService(EventRepository eventRepository, VenueRepository venueRepository, VendorRepository vendorRepository) {
+    public EventService(
+            EventRepository eventRepository,
+            VenueRepository venueRepository,
+            VendorRepository vendorRepository,
+            KafkaNotificationPublisher kafkaNotificationPublisher,
+            BookingServiceClient bookingServiceClient
+    ) {
         EventValidationOperations eventValidationOperations = new EventValidationOperations(eventRepository, venueRepository);
         EventVendorOperations eventVendorOperations = new EventVendorOperations(vendorRepository);
 
@@ -32,14 +38,17 @@ public class EventService {
                 eventRepository,
                 eventReadOperations,
                 eventValidationOperations,
-                eventVendorOperations
+                eventVendorOperations,
+                kafkaNotificationPublisher,
+                bookingServiceClient
         );
         this.eventAssignmentOperations = new EventAssignmentOperations(
                 eventRepository,
                 vendorRepository,
                 eventReadOperations,
                 eventValidationOperations,
-                eventVendorOperations
+                eventVendorOperations,
+                kafkaNotificationPublisher
         );
     }
 
@@ -107,8 +116,20 @@ public class EventService {
         return eventLifecycleOperations.rejectEvent(id, rejectionReason, requesterId, requesterRole);
     }
 
+    public Event vendorAcceptEvent(String id, String vendorUserId) {
+        return eventLifecycleOperations.vendorAcceptEvent(id, vendorUserId);
+    }
+
+    public Event vendorDeclineEvent(String id, String vendorUserId, String reason) {
+        return eventLifecycleOperations.vendorDeclineEvent(id, vendorUserId, reason);
+    }
+
     public Event cancelEvent(String id, String requesterId, String requesterRole) {
         return eventLifecycleOperations.cancelEvent(id, requesterId, requesterRole);
+    }
+
+    public Event toggleRegistration(String id, String requesterId, String requesterRole) {
+        return eventLifecycleOperations.toggleRegistration(id, requesterId, requesterRole);
     }
 
     public Event addVendorToEvent(String eventId, VendorAssignmentDTO dto, String requesterRole) {

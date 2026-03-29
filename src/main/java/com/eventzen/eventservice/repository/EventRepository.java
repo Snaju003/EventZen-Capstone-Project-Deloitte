@@ -17,6 +17,8 @@ public interface EventRepository extends MongoRepository<Event, String> {
 
     List<Event> findByCreatedBy(String createdBy);
 
+    List<Event> findByApprovedVendorUserId(String approvedVendorUserId);
+
     @Query(
             value = "{ 'venueId': ?0, 'status': 'published', 'startTime': { $lt: ?2 }, 'endTime': { $gt: ?1 } }",
             exists = true

@@ -4,10 +4,13 @@ import com.eventzen.eventservice.dto.VendorAssignmentDTO;
 import com.eventzen.eventservice.exception.ResourceNotFoundException;
 import com.eventzen.eventservice.model.Event;
 import com.eventzen.eventservice.model.EventVendor;
+import com.eventzen.eventservice.model.Vendor;
 import com.eventzen.eventservice.repository.EventRepository;
 import com.eventzen.eventservice.repository.VendorRepository;
 
 import java.time.LocalDateTime;
+import java.util.HashMap;
+import java.util.Map;
 
 class EventAssignmentOperations {
 
@@ -16,19 +19,22 @@ class EventAssignmentOperations {
     private final EventReadOperations eventReadOperations;
     private final EventValidationOperations eventValidationOperations;
     private final EventVendorOperations eventVendorOperations;
+    private final KafkaNotificationPublisher kafkaNotificationPublisher;
 
     EventAssignmentOperations(
             EventRepository eventRepository,
             VendorRepository vendorRepository,
             EventReadOperations eventReadOperations,
             EventValidationOperations eventValidationOperations,
-            EventVendorOperations eventVendorOperations
+            EventVendorOperations eventVendorOperations,
+            KafkaNotificationPublisher kafkaNotificationPublisher
     ) {
         this.eventRepository = eventRepository;
         this.vendorRepository = vendorRepository;
         this.eventReadOperations = eventReadOperations;
         this.eventValidationOperations = eventValidationOperations;
         this.eventVendorOperations = eventVendorOperations;
+        this.kafkaNotificationPublisher = kafkaNotificationPublisher;
     }
 
     Event addVendorToEvent(String eventId, VendorAssignmentDTO dto, String requesterRole) {
@@ -64,11 +70,21 @@ class EventAssignmentOperations {
             throw new ResourceNotFoundException("Vendor assignment not found for vendorId: " + vendorId);
         }
 
-        eventVendorOperations.applyApprovedVendor(event, vendorId);
+        Vendor vendor = eventVendorOperations.applyApprovedVendor(event, vendorId);
+        event.setStatus("pending_vendor");
         event.setApprovedBy(requesterId);
         event.setApprovedAt(LocalDateTime.now());
 
-        return eventRepository.save(event);
+        Event savedEvent = eventRepository.save(event);
+        Map<String, Object> payload = new HashMap<>();
+        payload.put("eventId", savedEvent.getId());
+        payload.put("eventTitle", savedEvent.getTitle());
+        payload.put("vendorId", vendorId);
+        payload.put("vendorUserId", vendor.getUserId());
+        payload.put("adminUserId", requesterId);
+        kafkaNotificationPublisher.publish("event.vendor-assigned", payload);
+
+        return savedEvent;
     }
 
     Event removeVendorFromEvent(String eventId, String vendorId, String requesterRole) {

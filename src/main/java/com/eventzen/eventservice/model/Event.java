@@ -36,6 +36,9 @@ public class Event {
     @Builder.Default
     private List<String> imageUrls = new ArrayList<>();
 
+    @Builder.Default
+    private List<TicketType> ticketTypes = new ArrayList<>();
+
     @Indexed
     private String status; // draft | rejected | published | cancelled
 
@@ -47,6 +50,9 @@ public class Event {
     private String rejectedBy;
     private LocalDateTime rejectedAt;
     private String rejectionReason;
+
+    @Builder.Default
+    private Boolean registrationOpen = false;
 
     // Embedded documents
     private Budget budget;

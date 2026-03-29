@@ -3,6 +3,8 @@ spring:
     mongodb:
       uri: ${MONGO_URI}
       database: ${MONGO_DATABASE}
+  kafka:
+    bootstrap-servers: ${KAFKA_BROKER:kafka:9092}
 
 server:
   port: ${SERVER_PORT}
@@ -14,3 +16,6 @@ logging:
 groq:
   api-key: ${GROQ_API_KEY}
   model: ${GROQ_MODEL:llama-3.3-70b-versatile}
+
+booking-service:
+  url: ${BOOKING_SERVICE_URL:http://booking-service:5000}
