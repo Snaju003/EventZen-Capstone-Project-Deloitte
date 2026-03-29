@@ -7,12 +7,14 @@ require("dotenv").config({ path: ".env.local", override: true });
 
 const app = require("./app");
 const connectDB = require("./config/db.config");
+const { connectKafkaProducer } = require("./utils/kafkaProducer");
 
 const PORT = process.env.PORT || 3001;
 
 const startServer = async () => {
   try {
     await connectDB();
+    await connectKafkaProducer();
 
     app.listen(PORT, () => {
       console.log(`Auth Service running on port ${PORT}`);

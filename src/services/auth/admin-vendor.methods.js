@@ -1,3 +1,5 @@
+const { publishNotificationEvent } = require("../../utils/kafkaProducer");
+
 module.exports = {
 	async promoteUserToAdmin(requesterId, targetUserId) {
 		const requester = await this.userModel.findById(requesterId);
@@ -46,6 +48,12 @@ module.exports = {
 		user.vendorRoleRequestedAt = new Date();
 		user.vendorRoleApprovedAt = undefined;
 		await user.save();
+
+		const requesterName = user.name || "User";
+		publishNotificationEvent("user.vendor-request", {
+			userId: user._id.toString(),
+			userName: requesterName,
+		}).catch(() => {});
 
 		return {
 			message: "Vendor role request submitted successfully",
@@ -97,6 +105,12 @@ module.exports = {
 		targetUser.vendorRoleStatus = "approved";
 		targetUser.vendorRoleApprovedAt = new Date();
 		await targetUser.save();
+
+		publishNotificationEvent("user.vendor-approved", {
+			userId: targetUser._id.toString(),
+			userName: targetUser.name || "User",
+			approvedBy: requester._id.toString(),
+		}).catch(() => {});
 
 		return {
 			message: "Vendor role approved successfully",
