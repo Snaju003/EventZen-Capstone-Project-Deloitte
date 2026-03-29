@@ -7,6 +7,7 @@ const eventsProxy = require("./routes/events.proxy");
 const bookingsProxy = require("./routes/bookings.proxy");
 const budgetProxy = require("./routes/budget.proxy");
 const paymentsProxy = require("./routes/payments.proxy");
+const notificationsProxy = require("./routes/notifications.proxy");
 const { createRateLimiter } = require("./middleware/rateLimit.middleware");
 const { verifyCsrfToken } = require("./middleware/csrf.middleware");
 const { globalErrorHandler, notFoundHandler } = require("./utils/errorHandler");
@@ -30,7 +31,9 @@ const corsOptions = {
       return callback(null, true);
     }
 
-    if (allowedOrigins.includes(origin)) {
+    const isLocalhostOrigin = /^https?:\/\/(localhost|127\.0\.0\.1):\d+$/.test(origin);
+
+    if (allowedOrigins.includes(origin) || (process.env.NODE_ENV !== "production" && isLocalhostOrigin)) {
       return callback(null, true);
     }
 
@@ -68,6 +71,18 @@ app.use("/api/auth/verify-reset-otp", otpLimiter);
 app.use("/api/auth/verify-otp", otpLimiter);
 app.use("/api/auth/resend-otp", otpLimiter);
 
+// ── Global API rate limiter (load protection) ───────────────────
+const globalApiRateLimitWindowMs = Number(process.env.GLOBAL_RATE_LIMIT_WINDOW_MS) || 60 * 1000;
+const globalApiRateLimitMax = Number(process.env.GLOBAL_RATE_LIMIT_MAX) || 100;
+
+const globalLimiter = createRateLimiter({
+  windowMs: globalApiRateLimitWindowMs,
+  maxRequests: globalApiRateLimitMax,
+  message: "Too many requests. Please slow down and try again.",
+});
+
+app.use("/api", globalLimiter);
+
 app.use(verifyCsrfToken);
 
 // ── Health check ────────────────────────────────────────────────
@@ -82,6 +97,7 @@ app.use(eventsProxy);
 app.use(bookingsProxy);
 app.use(budgetProxy);
 app.use(paymentsProxy);
+app.use(notificationsProxy);
 
 // ── Catch-all 404 & global error handler ────────────────────────
 app.use(notFoundHandler);

@@ -12,6 +12,7 @@ const requireAdmin = authorizeRoles("admin");
 
 const createPaymentsProxy = (pathPrefix) => createServiceProxy({
   target: proxyConfig.paymentService.target,
+  targets: proxyConfig.paymentService.targets,
   upstreamPrefix: pathPrefix,
   serviceName: "Payment Service",
   onProxyReq: (proxyReq, req) => {

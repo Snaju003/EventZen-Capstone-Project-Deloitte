@@ -21,6 +21,14 @@ function enforceBookingRouteRoles(req, res, next) {
     return requireAdmin(req, res, next);
   }
 
+  // Internal route should never be exposed via gateway
+  if (req.method === "GET" && /^\/event\/[^/]+\/users-internal$/.test(path)) {
+    return res.status(403).json({
+      success: false,
+      message: "Access denied.",
+    });
+  }
+
   // DELETE /:id/admin — admin cancel
   if (req.method === "DELETE" && /^\/[^/]+\/admin$/.test(path)) {
     return requireAdmin(req, res, next);
@@ -31,6 +39,7 @@ function enforceBookingRouteRoles(req, res, next) {
 
 const proxy = createServiceProxy({
   target: proxyConfig.bookingService.target,
+  targets: proxyConfig.bookingService.targets,
   upstreamPrefix: "/bookings",
   serviceName: "Booking Service",
   onProxyReq: (proxyReq, req) => {

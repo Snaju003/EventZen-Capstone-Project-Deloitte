@@ -1,6 +1,7 @@
 const express = require("express");
 
 const proxyConfig = require("../config/proxy.config");
+const { createCacheMiddleware } = require("../middleware/cache.middleware");
 const { verifyToken, verifyTokenIfPresent, authorizeRoles } = require("../middleware/jwt.middleware");
 const { createServiceProxy, setGatewayIdentityHeaders } = require("../utils/proxyHelpers");
 
@@ -59,6 +60,14 @@ function enforceEventRouteRoles(req, res, next) {
     return applyRoleGuard(requireAdmin, req, res, next);
   }
 
+  if (req.method === "POST" && /^\/[^/]+\/vendor-accept$/.test(path)) {
+    return applyRoleGuard(requireAdminOrVendor, req, res, next);
+  }
+
+  if (req.method === "POST" && /^\/[^/]+\/vendor-decline$/.test(path)) {
+    return applyRoleGuard(requireAdminOrVendor, req, res, next);
+  }
+
   return next();
 }
 
@@ -76,6 +85,7 @@ function enforceVendorRouteRoles(req, res, next) {
 
 const createEventServiceProxy = (upstreamPrefix) => createServiceProxy({
   target: proxyConfig.eventService.target,
+  targets: proxyConfig.eventService.targets,
   upstreamPrefix,
   serviceName: "Event Service",
   onProxyReq: (proxyReq, req) => {
@@ -83,8 +93,12 @@ const createEventServiceProxy = (upstreamPrefix) => createServiceProxy({
   },
 });
 
-router.use("/api/events", verifyTokenIfPresent, enforceEventRouteRoles, createEventServiceProxy("/events"));
-router.use("/api/venues", verifyTokenIfPresent, enforceVenueRouteRoles, createEventServiceProxy("/venues"));
+// Cache public GET requests for events and venues (10-second TTL)
+const eventsCache = createCacheMiddleware({ ttlMs: 10_000, pathPrefix: "/api/events" });
+const venuesCache = createCacheMiddleware({ ttlMs: 10_000, pathPrefix: "/api/venues" });
+
+router.use("/api/events", verifyTokenIfPresent, enforceEventRouteRoles, eventsCache, createEventServiceProxy("/events"));
+router.use("/api/venues", verifyTokenIfPresent, enforceVenueRouteRoles, venuesCache, createEventServiceProxy("/venues"));
 router.use("/api/vendors", verifyToken, enforceVendorRouteRoles, createEventServiceProxy("/vendors"));
 
 module.exports = router;
