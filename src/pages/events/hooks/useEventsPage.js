@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 
+import { useDebounce } from "@/hooks/useDebounce";
 import { getApiErrorMessage } from "@/lib/auth-api";
 import { getEventsPage, getVenues } from "@/lib/events-api";
 
@@ -26,18 +27,11 @@ export function useEventsPage() {
   const [venues, setVenues] = useState([]);
   const [pagination, setPagination] = useState(defaultPagination);
   const [filters, setFilters] = useState(defaultFilters);
-  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
 
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setDebouncedSearch(filters.search.trim());
-    }, 250);
-
-    return () => clearTimeout(timer);
-  }, [filters.search]);
+  const debouncedSearch = useDebounce(filters.search.trim(), 300);
 
   const loadVenues = useCallback(async () => {
     try {

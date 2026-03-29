@@ -8,6 +8,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { LogoIcon } from "@/components/ui/Icons";
 import { getApiErrorMessage } from "@/lib/auth-api";
 import { getFieldErrors, verifyOtpSchema } from "@/lib/auth-schemas";
+import { getRoleHomePath } from "@/lib/role-home";
 import { OtpDigitFields } from "./components/OtpDigitFields";
 
 const VerifyOtpPage = () => {
@@ -29,12 +30,11 @@ const VerifyOtpPage = () => {
  const isComplete = otp.every((digit) => digit !== "");
 
  const getPostLoginPath = (nextUser) => {
- const normalizedRole = nextUser?.role?.toLowerCase();
- const isAdminOrVendor = normalizedRole === "admin" || normalizedRole === "vendor";
+ const roleHomePath = getRoleHomePath(nextUser?.role);
  
  let path = location.state?.from;
  if (!path || path === "/" || path === "/profile") {
-    path = isAdminOrVendor ? "/admin/dashboard" : "/events";
+    path = roleHomePath;
  }
  
  return path;

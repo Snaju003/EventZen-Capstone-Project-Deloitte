@@ -5,6 +5,7 @@ import { RouteLoadingFallback } from "@/components/ui/RouteLoadingFallback";
 export function AdminRoute({ children }) {
   const { user, isInitializing } = useAuth();
   const location = useLocation();
+  const returnTo = `${location.pathname}${location.search}${location.hash}`;
 
   if (isInitializing) {
     return <RouteLoadingFallback message="Loading admin access..." />;
@@ -13,7 +14,7 @@ export function AdminRoute({ children }) {
   const isAdmin = user?.role?.toLowerCase() === "admin";
 
   if (!isAdmin) {
-    return <Navigate to="/events" state={{ from: location.pathname }} replace />;
+    return <Navigate to="/events" state={{ from: returnTo }} replace />;
   }
 
   return children;
@@ -22,6 +23,7 @@ export function AdminRoute({ children }) {
 export function RoleRoute({ children, allowedRoles = [] }) {
   const { user, isInitializing } = useAuth();
   const location = useLocation();
+  const returnTo = `${location.pathname}${location.search}${location.hash}`;
 
   if (isInitializing) {
     return <RouteLoadingFallback message="Checking role permissions..." />;
@@ -31,7 +33,7 @@ export function RoleRoute({ children, allowedRoles = [] }) {
   const normalizedAllowedRoles = allowedRoles.map((item) => item.toLowerCase());
 
   if (!normalizedAllowedRoles.includes(role)) {
-    return <Navigate to="/events" state={{ from: location.pathname }} replace />;
+    return <Navigate to="/events" state={{ from: returnTo }} replace />;
   }
 
   return children;

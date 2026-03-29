@@ -296,7 +296,7 @@ export function EventFormDialog({
           <div className="mt-3 grid grid-cols-3 gap-2 sm:grid-cols-5">
             {form.imageUrls.map((url, index) => (
               <div key={`${url}-${index}`} className="relative overflow-hidden rounded-xl border border-slate-200 shadow-sm">
-                <img src={url} alt={`Event upload ${index + 1}`} className="h-16 w-full object-cover" />
+                <img src={url} alt={`Event upload ${index + 1}`} loading="lazy" decoding="async" className="h-16 w-full object-cover" />
                 <button
                   type="button"
                   onClick={() => onRemoveImage(index)}

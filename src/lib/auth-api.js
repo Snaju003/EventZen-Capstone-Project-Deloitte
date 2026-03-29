@@ -2,8 +2,8 @@ import axios from "axios";
 import { attachCsrfHeader } from "@/lib/csrf";
 
 export const BACKEND_BASE_URL =
-  import.meta.env.BACKEND_URL ||
   import.meta.env.VITE_BACKEND_URL ||
+  import.meta.env.BACKEND_URL ||
   "http://localhost:3000";
 
 export const AUTH_API_BASE = `${BACKEND_BASE_URL.replace(/\/$/, "")}/api/auth`;

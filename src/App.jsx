@@ -25,6 +25,7 @@ const AdminVendors = lazy(() => import("@/pages/admin/AdminVendors"));
 const AdminAttendees = lazy(() => import("@/pages/admin/AdminAttendees"));
 const AdminBudget = lazy(() => import("@/pages/admin/AdminBudget"));
 const VendorCheckIn = lazy(() => import("@/pages/vendor/VendorCheckIn"));
+const NotificationsPage = lazy(() => import("@/pages/notifications/NotificationsPage"));
 
 function App() {
   const location = useLocation();
@@ -56,6 +57,7 @@ function App() {
               <Route path='/venues' element={<ProtectedRoute><Venues /></ProtectedRoute>} />
               <Route path='/my-bookings' element={<ProtectedRoute><Bookings /></ProtectedRoute>} />
               <Route path='/bookings' element={<Navigate to='/my-bookings' replace />} />
+              <Route path='/notifications' element={<ProtectedRoute><NotificationsPage /></ProtectedRoute>} />
 
               <Route path='/admin' element={<ProtectedRoute><RoleRoute allowedRoles={["admin", "vendor"]}><Navigate to='/admin/dashboard' replace /></RoleRoute></ProtectedRoute>} />
               <Route path='/admin/dashboard' element={<ProtectedRoute><RoleRoute allowedRoles={["admin", "vendor"]}><AdminDashboard /></RoleRoute></ProtectedRoute>} />
@@ -66,6 +68,8 @@ function App() {
               <Route path='/admin/vendors' element={<ProtectedRoute><AdminRoute><AdminVendors /></AdminRoute></ProtectedRoute>} />
               <Route path='/admin/budget/:eventId' element={<ProtectedRoute><RoleRoute allowedRoles={["admin", "vendor"]}><AdminBudget /></RoleRoute></ProtectedRoute>} />
               <Route path='/vendor/check-in/:eventId' element={<ProtectedRoute><RoleRoute allowedRoles={["admin", "vendor"]}><VendorCheckIn /></RoleRoute></ProtectedRoute>} />
+              <Route path='/admin/*' element={<ProtectedRoute><RoleRoute allowedRoles={["admin", "vendor"]}><Navigate to='/admin/dashboard' replace /></RoleRoute></ProtectedRoute>} />
+              <Route path='*' element={<Navigate to='/' replace />} />
             </Routes>
           </motion.div>
         </AnimatePresence>

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import toast from "react-hot-toast";
 
 import { useAuth } from "@/hooks/useAuth";
+import { useDebounce } from "@/hooks/useDebounce";
 import { getApiErrorMessage } from "@/lib/auth-api";
 import {
   getEvents,
@@ -55,6 +56,7 @@ export function useAdminEventsPage() {
 
   const [statusFilter, setStatusFilter] = useState("all");
   const [searchTerm, setSearchTerm] = useState("");
+  const debouncedSearch = useDebounce(searchTerm, 300);
   const [currentPage, setCurrentPage] = useState(1);
   const [pageMeta, setPageMeta] = useState(emptyPageMeta);
   const [eventCounts, setEventCounts] = useState(emptyEventCounts);
@@ -72,7 +74,7 @@ export function useAdminEventsPage() {
       const [eventsPage, venuesData] = await Promise.all([
         getEventsPage({
           status: normalizeStatusFilter(statusFilter),
-          search: searchTerm.trim() || undefined,
+          search: debouncedSearch.trim() || undefined,
           page: currentPage,
           size: 9,
           sortBy: "startTime",
@@ -130,7 +132,7 @@ export function useAdminEventsPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [currentPage, isAdmin, searchTerm, statusFilter]);
+  }, [currentPage, isAdmin, debouncedSearch, statusFilter]);
 
   useEffect(() => {
     loadData();

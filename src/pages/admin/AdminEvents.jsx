@@ -1,12 +1,21 @@
-import { RejectEventDialog } from "@/pages/admin/components/RejectEventDialog";
+import { Suspense, lazy } from "react";
+
 import { AdminEventCard } from "@/pages/admin/components/events/AdminEventCard";
 import { AdminEventsToolbar } from "@/pages/admin/components/events/AdminEventsToolbar";
 import { ApprovalQueue } from "@/pages/admin/components/events/ApprovalQueue";
-import { EventEditorDialog } from "@/pages/admin/components/events/EventEditorDialog";
 import { EventPaginationControls } from "@/pages/admin/components/events/EventPaginationControls";
-import { PublishBudgetDialog } from "@/pages/admin/components/events/PublishBudgetDialog";
 import { useAdminEventMutations } from "@/pages/admin/hooks/useAdminEventMutations";
 import { useAdminEventsPage } from "@/pages/admin/hooks/useAdminEventsPage";
+
+const EventEditorDialog = lazy(() =>
+  import("@/pages/admin/components/events/EventEditorDialog").then((m) => ({ default: m.EventEditorDialog }))
+);
+const RejectEventDialog = lazy(() =>
+  import("@/pages/admin/components/RejectEventDialog").then((m) => ({ default: m.RejectEventDialog }))
+);
+const PublishBudgetDialog = lazy(() =>
+  import("@/pages/admin/components/events/PublishBudgetDialog").then((m) => ({ default: m.PublishBudgetDialog }))
+);
 
 export default function AdminEvents() {
   const page = useAdminEventsPage();
@@ -82,33 +91,6 @@ export default function AdminEvents() {
           />
         ) : null}
 
-        <EventEditorDialog
-          editingId={editingId}
-          form={form}
-          isAdmin={isAdmin}
-          isOpen={isFormDialogOpen}
-          onClose={page.closeFormDialog}
-          onImageUpload={actions.handleImageUpload}
-          onImageDrop={actions.handleImageDrop}
-          onOpenChange={(open) => {
-            setIsFormDialogOpen(open);
-            if (!open) resetForm();
-          }}
-          onRemoveImage={actions.removeImageAtIndex}
-          onSubmit={actions.handleSubmit}
-          previewDescription={actions.previewDescription}
-          previewImages={actions.previewImages}
-          previewStartTime={actions.previewStartTime}
-          previewTitle={actions.previewTitle}
-          previewVenue={actions.previewVenue}
-          setForm={setForm}
-          submitting={submitting}
-          uploadingImages={uploadingImages}
-          venues={venues}
-          vendors={vendors}
-          allEvents={events}
-        />
-
         {isLoading ? (
           <div role="status" aria-live="polite" className="rounded-lg border border-slate-200 bg-white p-6 text-center text-slate-500">
             Loading events...
@@ -149,28 +131,57 @@ export default function AdminEvents() {
           </>
         )}
 
-        <RejectEventDialog
-          open={rejectionDialog.open}
-          eventTitle={rejectionDialog.eventTitle}
-          reason={rejectionDialog.reason}
-          onReasonChange={(value) => setRejectionDialog((previous) => ({ ...previous, reason: value }))}
-          onCancel={actions.closeRejectDialog}
-          onConfirm={actions.confirmRejectEvent}
-          isSubmitting={isRejecting}
-        />
+        <Suspense fallback={null}>
+          <EventEditorDialog
+            editingId={editingId}
+            form={form}
+            isAdmin={isAdmin}
+            isOpen={isFormDialogOpen}
+            onClose={page.closeFormDialog}
+            onImageUpload={actions.handleImageUpload}
+            onImageDrop={actions.handleImageDrop}
+            onOpenChange={(open) => {
+              setIsFormDialogOpen(open);
+              if (!open) resetForm();
+            }}
+            onRemoveImage={actions.removeImageAtIndex}
+            onSubmit={actions.handleSubmit}
+            previewDescription={actions.previewDescription}
+            previewImages={actions.previewImages}
+            previewStartTime={actions.previewStartTime}
+            previewTitle={actions.previewTitle}
+            previewVenue={actions.previewVenue}
+            setForm={setForm}
+            submitting={submitting}
+            uploadingImages={uploadingImages}
+            venues={venues}
+            vendors={vendors}
+            allEvents={events}
+          />
 
-        <PublishBudgetDialog
-          isPublishing={isPublishing}
-          onChangeOpen={(open) => {
-            if (!open && !isPublishing) {
-              actions.closePublishDialog();
-            }
-          }}
-          onConfirm={actions.confirmApproveAndPublish}
-          onValueChange={(value) => setPublishDialog((previous) => ({ ...previous, totalBudget: value }))}
-          onCancel={actions.closePublishDialog}
-          publishDialog={publishDialog}
-        />
+          <RejectEventDialog
+            open={rejectionDialog.open}
+            eventTitle={rejectionDialog.eventTitle}
+            reason={rejectionDialog.reason}
+            onReasonChange={(value) => setRejectionDialog((previous) => ({ ...previous, reason: value }))}
+            onCancel={actions.closeRejectDialog}
+            onConfirm={actions.confirmRejectEvent}
+            isSubmitting={isRejecting}
+          />
+
+          <PublishBudgetDialog
+            isPublishing={isPublishing}
+            onChangeOpen={(open) => {
+              if (!open && !isPublishing) {
+                actions.closePublishDialog();
+              }
+            }}
+            onConfirm={actions.confirmApproveAndPublish}
+            onValueChange={(value) => setPublishDialog((previous) => ({ ...previous, totalBudget: value }))}
+            onCancel={actions.closePublishDialog}
+            publishDialog={publishDialog}
+          />
+        </Suspense>
       </main>
     </div>
   );

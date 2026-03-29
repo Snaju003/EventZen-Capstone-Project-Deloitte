@@ -7,6 +7,7 @@ import { RegisterForm } from "@/components/auth/RegisterForm";
 import { Button } from "@/components/ui/button";
 import { LogoIcon } from "@/components/ui/Icons";
 import { useAuth } from "@/hooks/useAuth";
+import { getRoleHomePath } from "@/lib/role-home";
 import toast from "react-hot-toast";
 
 const tabVariants = {
@@ -40,12 +41,11 @@ const AuthPage = () => {
   }, [location.pathname, location.state, navigate]);
 
   if (isAuthenticated) {
-    const normalizedRole = user?.role?.toLowerCase();
-    const isAdminOrVendor = normalizedRole === "admin" || normalizedRole === "vendor";
+    const roleHomePath = getRoleHomePath(user?.role);
     
     let redirectPath = location.state?.from;
     if (!redirectPath || redirectPath === "/" || redirectPath === "/profile") {
-      redirectPath = isAdminOrVendor ? "/admin/dashboard" : "/events";
+      redirectPath = roleHomePath;
     }
     
     return <Navigate to={redirectPath} replace />;

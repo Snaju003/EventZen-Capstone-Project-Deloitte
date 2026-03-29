@@ -56,6 +56,8 @@ export function ImageCarousel({ images, altPrefix = "Image", className = "" }) {
                     key={current}
                     src={validImages[current]}
                     alt={`${altPrefix} ${current + 1}`}
+                    loading="lazy"
+                    decoding="async"
                     custom={direction}
                     variants={slideVariants}
                     initial="enter"

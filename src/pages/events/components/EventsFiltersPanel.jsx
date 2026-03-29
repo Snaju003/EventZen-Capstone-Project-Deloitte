@@ -130,7 +130,7 @@ export function EventsFiltersPanel({ filters, onFilterChange, onResetFilters, ve
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3, ease: "easeOut" }}
-      className="surface-card relative z-30 mb-6 grid grid-cols-1 gap-3 overflow-visible p-4 md:grid-cols-4"
+      className="surface-card relative z-30 mb-6 grid grid-cols-1 items-center gap-3 overflow-visible p-4 md:grid-cols-4"
     >
       <div>
         <label htmlFor="events-search" className="sr-only">Search events</label>
@@ -148,7 +148,7 @@ export function EventsFiltersPanel({ filters, onFilterChange, onResetFilters, ve
           value={filters.venueId}
           onValueChange={(value) => onFilterChange("venueId", value)}
         >
-          <SelectTrigger className="h-11 w-full rounded-xl border-slate-200/80 bg-white/95 shadow-sm">
+          <SelectTrigger className="!h-11 w-full rounded-xl border-slate-200/80 bg-white/95 shadow-sm">
             <SelectValue placeholder="All venues" />
           </SelectTrigger>
           <SelectContent>
@@ -173,7 +173,7 @@ export function EventsFiltersPanel({ filters, onFilterChange, onResetFilters, ve
           value={filters.sortDir || "asc"}
           onValueChange={(value) => onFilterChange("sortDir", value)}
         >
-          <SelectTrigger className="h-11 w-full rounded-xl border-slate-200/80 bg-white/95 shadow-sm">
+          <SelectTrigger className="!h-11 w-full rounded-xl border-slate-200/80 bg-white/95 shadow-sm">
             <SelectValue placeholder="Sort by" />
           </SelectTrigger>
           <SelectContent>

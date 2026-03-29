@@ -8,6 +8,7 @@ import { MailIcon, LockIcon } from "@/components/ui/Icons";
 import { useAuth } from "@/hooks/useAuth";
 import { getApiErrorMessage } from "@/lib/auth-api";
 import { getFieldErrors, loginSchema } from "@/lib/auth-schemas";
+import { getRoleHomePath } from "@/lib/role-home";
 import toast from "react-hot-toast";
 
 export const LoginForm = () => {
@@ -34,16 +35,14 @@ export const LoginForm = () => {
  try {
  const result = await login(parsedValues.data);
  const welcomeName = result?.user?.name ? `, ${result.user.name}` : '';
- const normalizedRole = result?.user?.role?.toLowerCase();
- 
- const isAdminOrVendor = normalizedRole === "admin" || normalizedRole === "vendor";
+ const roleHomePath = getRoleHomePath(result?.user?.role);
  let redirectPath = location.state?.from;
  
  // If no redirect path, or if the user came from the public landing page ("/") 
  // or their profile page (e.g. they logged out there last), 
  // route them strictly to their core experience area
  if (!redirectPath || redirectPath === "/" || redirectPath === "/profile") {
-    redirectPath = isAdminOrVendor ? "/admin/dashboard" : "/events";
+    redirectPath = roleHomePath;
  }
 
  navigate(redirectPath, {

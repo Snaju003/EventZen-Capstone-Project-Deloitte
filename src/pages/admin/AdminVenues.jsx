@@ -1,7 +1,12 @@
+import { Suspense, lazy } from "react";
+
 import { VenueCard } from "@/pages/admin/components/venues/VenueCard";
-import { VenueFormDialog } from "@/pages/admin/components/venues/VenueFormDialog";
 import { useAdminVenuesPage } from "@/pages/admin/hooks/useAdminVenuesPage";
 import { VenueDescriptionDialog } from "@/components/common/VenueDescriptionDialog";
+
+const VenueFormDialog = lazy(() =>
+  import("@/pages/admin/components/venues/VenueFormDialog").then((m) => ({ default: m.VenueFormDialog }))
+);
 
 export default function AdminVenues() {
   const {
@@ -56,25 +61,27 @@ export default function AdminVenues() {
           </button>
         </section>
 
-        <VenueFormDialog
-          editingId={editingId}
-          form={form}
-          isOpen={isFormDialogOpen}
-          isSubmitting={isSubmitting}
-          isUploadingImages={isUploadingImages}
-          onClose={closeFormDialog}
-          onImageDrop={handleImageDrop}
-          onImageUpload={handleImageUpload}
-          onOpenChange={(open) => {
-            setIsFormDialogOpen(open);
-            if (!open) {
-              resetForm();
-            }
-          }}
-          onRemoveImage={removeImageAtIndex}
-          onSubmit={submitVenue}
-          setForm={setForm}
-        />
+        <Suspense fallback={null}>
+          <VenueFormDialog
+            editingId={editingId}
+            form={form}
+            isOpen={isFormDialogOpen}
+            isSubmitting={isSubmitting}
+            isUploadingImages={isUploadingImages}
+            onClose={closeFormDialog}
+            onImageDrop={handleImageDrop}
+            onImageUpload={handleImageUpload}
+            onOpenChange={(open) => {
+              setIsFormDialogOpen(open);
+              if (!open) {
+                resetForm();
+              }
+            }}
+            onRemoveImage={removeImageAtIndex}
+            onSubmit={submitVenue}
+            setForm={setForm}
+          />
+        </Suspense>
 
         {isLoading ? (
           <div className="surface-card animate-fade delay-3 p-6 text-center text-slate-600">Loading venues...</div>

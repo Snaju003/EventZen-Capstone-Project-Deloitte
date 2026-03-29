@@ -1,3 +1,4 @@
+import { Suspense, lazy } from "react";
 import { CalendarOff } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
 
@@ -6,8 +7,11 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { SkeletonCardGrid } from "@/components/ui/SkeletonCard";
 import { staggerContainer } from "@/lib/animations";
 import { BookingCard } from "@/pages/bookings/components/BookingCard";
-import { BookingTicketDialog } from "@/pages/bookings/components/BookingTicketDialog";
 import { useBookingsPage } from "@/pages/bookings/hooks/useBookingsPage";
+
+const BookingTicketDialog = lazy(() =>
+  import("@/pages/bookings/components/BookingTicketDialog").then((m) => ({ default: m.BookingTicketDialog }))
+);
 
 export default function Bookings() {
   const {
@@ -114,15 +118,17 @@ export default function Bookings() {
 
       <Footer />
 
-      <BookingTicketDialog
-        isDownloadingTicket={isDownloadingTicket}
-        isGeneratingQr={isGeneratingQr}
-        onClose={() => setSelectedTicket(null)}
-        onDownloadPdf={handleDownloadTicketPdf}
-        onDownloadPng={handleDownloadTicketPng}
-        selectedTicket={selectedTicket}
-        ticketQrCodeUrl={ticketQrCodeUrl}
-      />
+      <Suspense fallback={null}>
+        <BookingTicketDialog
+          isDownloadingTicket={isDownloadingTicket}
+          isGeneratingQr={isGeneratingQr}
+          onClose={() => setSelectedTicket(null)}
+          onDownloadPdf={handleDownloadTicketPdf}
+          onDownloadPng={handleDownloadTicketPng}
+          selectedTicket={selectedTicket}
+          ticketQrCodeUrl={ticketQrCodeUrl}
+        />
+      </Suspense>
     </div>
   );
 }

@@ -215,7 +215,7 @@ export function VenueFormDialog({
               <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
                 {form.imageUrls.map((url, index) => (
                   <div key={`${url}-${index}`} className="relative overflow-hidden rounded-xl border border-slate-200 shadow-sm">
-                    <img src={url} alt={`Venue upload ${index + 1}`} className="h-20 w-full object-cover" />
+                    <img src={url} alt={`Venue upload ${index + 1}`} loading="lazy" decoding="async" className="h-20 w-full object-cover" />
                     <button
                       type="button"
                       onClick={() => onRemoveImage(index)}

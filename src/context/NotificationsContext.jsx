@@ -10,6 +10,17 @@ import {
 } from "@/lib/notifications-api";
 
 const NotificationsContext = createContext(null);
+const DEFAULT_NOTIFICATIONS_POLL_MS = 5000;
+
+function resolvePollIntervalMs() {
+  const configured = Number(import.meta.env.VITE_NOTIFICATIONS_POLL_MS);
+
+  if (!Number.isFinite(configured) || configured <= 0) {
+    return DEFAULT_NOTIFICATIONS_POLL_MS;
+  }
+
+  return Math.max(configured, 2000);
+}
 
 function getNavigationTarget(notification) {
   const type = String(notification?.type || "");
@@ -44,6 +55,7 @@ function getNavigationTarget(notification) {
 
 export function NotificationsProvider({ children }) {
   const { isAuthenticated, isInitializing } = useAuth();
+  const pollIntervalMs = resolvePollIntervalMs();
 
   const [items, setItems] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -103,9 +115,33 @@ export function NotificationsProvider({ children }) {
 
     const interval = setInterval(() => {
       refreshNotifications();
-    }, 30000);
+    }, pollIntervalMs);
 
     return () => clearInterval(interval);
+  }, [isAuthenticated, isInitializing, pollIntervalMs, refreshNotifications]);
+
+  useEffect(() => {
+    if (isInitializing || !isAuthenticated) {
+      return undefined;
+    }
+
+    const onFocus = () => {
+      refreshNotifications();
+    };
+
+    const onVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        refreshNotifications();
+      }
+    };
+
+    window.addEventListener("focus", onFocus);
+    document.addEventListener("visibilitychange", onVisibilityChange);
+
+    return () => {
+      window.removeEventListener("focus", onFocus);
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+    };
   }, [isAuthenticated, isInitializing, refreshNotifications]);
 
   const markOneAsRead = useCallback(async (id) => {

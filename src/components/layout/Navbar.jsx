@@ -1,55 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { Bell, Calendar, CircleCheck, CircleX, LayoutDashboard, Menu, Ticket, UserCheck, X } from "lucide-react";
+import { Calendar, LayoutDashboard, Menu, Ticket, X } from "lucide-react";
+import { NotificationBellButton, NotificationsPanel } from "@/components/layout/NotificationsPanel";
 
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import { useNotifications } from "@/hooks/useNotifications";
-
-function getRelativeTime(value) {
-  if (!value) {
-    return "just now";
-  }
-
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) {
-    return "just now";
-  }
-
-  const diffMs = Date.now() - date.getTime();
-  const minutes = Math.floor(diffMs / 60000);
-  if (minutes < 1) return "just now";
-  if (minutes < 60) return `${minutes}m ago`;
-
-  const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours}h ago`;
-
-  const days = Math.floor(hours / 24);
-  if (days < 7) return `${days}d ago`;
-
-  return date.toLocaleDateString();
-}
-
-function NotificationTypeIcon({ type }) {
-  if (String(type || "").startsWith("booking.")) {
-    return <Ticket className="h-4 w-4 text-cyan-300" />;
-  }
-
-  if (String(type || "").startsWith("payment.")) {
-    return <CircleCheck className="h-4 w-4 text-emerald-300" />;
-  }
-
-  if (String(type || "").endsWith("declined")) {
-    return <CircleX className="h-4 w-4 text-amber-300" />;
-  }
-
-  if (String(type || "").includes("vendor")) {
-    return <UserCheck className="h-4 w-4 text-indigo-300" />;
-  }
-
-  return <Bell className="h-4 w-4 text-slate-200" />;
-}
 
 const publicNavLinks = [
   { label: "Home", to: "/", type: "route" },
@@ -194,81 +151,27 @@ export function Navbar() {
           {isAuthenticated ? (
             <div className="flex items-center gap-3 border-l border-slate-200 pl-3 md:gap-4 md:pl-5">
               <div className="relative">
-                <button
-                  type="button"
-                  aria-label="Notifications"
-                  onClick={() => {
+                <NotificationBellButton
+                  unreadCount={unreadCount}
+                  isOpen={notificationsOpen}
+                  onToggle={() => {
                     const next = !notificationsOpen;
                     setNotificationsOpen(next);
-                    if (next) {
-                      refreshNotifications();
-                    }
+                    if (next) refreshNotifications();
                   }}
-                  className="relative rounded-full border border-white/25 bg-slate-900/45 p-2 text-slate-100 shadow-sm backdrop-blur transition hover:bg-slate-900/60"
-                >
-                  <Bell className="h-5 w-5" />
-                  {unreadCount > 0 ? (
-                    <span className="absolute -right-1 -top-1 min-w-5 rounded-full bg-rose-500 px-1.5 py-0.5 text-center text-[10px] font-semibold leading-none text-white">
-                      {unreadCount > 99 ? "99+" : unreadCount}
-                    </span>
-                  ) : null}
-                </button>
+                />
 
-                <AnimatePresence>
-                  {notificationsOpen ? (
-                    <motion.div
-                      initial={{ opacity: 0, y: 6 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: 6 }}
-                      transition={{ duration: 0.2, ease: "easeOut" }}
-                      className="absolute right-0 top-12 z-50 w-[22rem] rounded-2xl border border-white/25 bg-slate-950/86 p-0 text-slate-100 shadow-[0_28px_80px_-42px_rgba(13,21,43,0.95)] backdrop-blur-xl"
-                    >
-                      <div className="flex items-center justify-between border-b border-white/10 px-4 py-3">
-                        <div>
-                          <p className="text-sm font-semibold">Notifications</p>
-                          <p className="text-xs text-slate-300/80">Latest updates from your account</p>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={markAllAsRead}
-                          className="rounded-md px-2 py-1 text-xs font-medium text-cyan-200 transition hover:bg-white/10"
-                        >
-                          Mark all as read
-                        </button>
-                      </div>
-                      <div className="max-h-96 overflow-auto p-2">
-                        {notifications.length === 0 ? (
-                          <div className="px-3 py-8 text-center text-sm text-slate-300/80">
-                            You're all caught up.
-                          </div>
-                        ) : notifications.map((notification) => (
-                          <button
-                            key={notification.id}
-                            type="button"
-                            onClick={() => {
-                              setNotificationsOpen(false);
-                              handleNotificationClick(notification);
-                            }}
-                            className={`mb-1 w-full rounded-xl border px-3 py-2.5 text-left transition ${notification.isRead ? "border-white/5 bg-white/0 hover:bg-white/5" : "border-cyan-300/25 bg-cyan-400/10 hover:bg-cyan-400/16"}`}
-                          >
-                            <div className="flex items-start gap-2.5">
-                              <div className="mt-0.5 rounded-md bg-white/10 p-1.5">
-                                <NotificationTypeIcon type={notification.type} />
-                              </div>
-                              <div className="min-w-0 flex-1">
-                                <div className="flex items-center justify-between gap-2">
-                                  <p className="truncate text-sm font-semibold text-white">{notification.title}</p>
-                                  <span className="shrink-0 text-[11px] text-slate-300/70">{getRelativeTime(notification.createdAt)}</span>
-                                </div>
-                                <p className="mt-0.5 line-clamp-2 text-xs text-slate-300/85">{notification.message}</p>
-                              </div>
-                            </div>
-                          </button>
-                        ))}
-                      </div>
-                    </motion.div>
-                  ) : null}
-                </AnimatePresence>
+                <NotificationsPanel
+                  isOpen={notificationsOpen}
+                  notifications={notifications}
+                  unreadCount={unreadCount}
+                  onClose={() => setNotificationsOpen(false)}
+                  onClickItem={(notification) => {
+                    setNotificationsOpen(false);
+                    handleNotificationClick(notification);
+                  }}
+                  onMarkAllRead={markAllAsRead}
+                />
               </div>
 
               <Link to="/profile" aria-label="Go to profile" className="rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2">
