@@ -1,0 +1,11 @@
+spring:
+  data:
+    mongodb:
+      uri: ${MONGO_URI}
+      database: ${MONGO_DATABASE}
+
+server:
+  port: ${SERVER_PORT:8081}
+
+event-service:
+  base-url: ${EVENT_SERVICE_BASE_URL:http://localhost:8080}
