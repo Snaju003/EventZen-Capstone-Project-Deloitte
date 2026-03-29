@@ -1,10 +1,12 @@
 const express = require("express");
 
 const notificationsRoutes = require("./routes/notifications.routes");
+const { metricsMiddleware, metricsEndpoint } = require("./monitoring/metrics");
 
 const app = express();
 
 app.use(express.json());
+app.use(metricsMiddleware);
 
 app.get("/", (req, res) => {
   res.status(200).json({
@@ -12,6 +14,8 @@ app.get("/", (req, res) => {
     message: "Notification Service is running",
   });
 });
+
+app.get("/metrics", metricsEndpoint);
 
 app.use(notificationsRoutes);
 

@@ -9,3 +9,13 @@ server:
 
 event-service:
   base-url: ${EVENT_SERVICE_BASE_URL:http://localhost:8080}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,prometheus
+  endpoint:
+    health:
+      probes:
+        enabled: true

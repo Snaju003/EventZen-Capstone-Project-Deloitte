@@ -8,6 +8,7 @@ const bookingsProxy = require("./routes/bookings.proxy");
 const budgetProxy = require("./routes/budget.proxy");
 const paymentsProxy = require("./routes/payments.proxy");
 const notificationsProxy = require("./routes/notifications.proxy");
+const { metricsMiddleware, metricsEndpoint } = require("./monitoring/metrics");
 const { createRateLimiter } = require("./middleware/rateLimit.middleware");
 const { verifyCsrfToken } = require("./middleware/csrf.middleware");
 const { globalErrorHandler, notFoundHandler } = require("./utils/errorHandler");
@@ -47,6 +48,7 @@ const corsOptions = {
 
 app.use(cors(corsOptions));
 app.options(/.*/, cors(corsOptions));
+app.use(metricsMiddleware);
 
 const authRateLimitWindowMs = Number(process.env.AUTH_RATE_LIMIT_WINDOW_MS) || 15 * 60 * 1000;
 const authRateLimitMaxAttempts = Number(process.env.AUTH_RATE_LIMIT_MAX_ATTEMPTS) || 10;
@@ -89,6 +91,8 @@ app.use(verifyCsrfToken);
 app.get("/", (req, res) => {
   res.json({ status: "ok", message: "API Gateway is running" });
 });
+
+app.get("/metrics", metricsEndpoint);
 
 // ── Proxy routes ────────────────────────────────────────────────
 // Auth proxy — pathFilter inside proxy config matches /api/auth/* requests

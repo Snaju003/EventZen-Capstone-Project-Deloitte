@@ -3,6 +3,7 @@ using BookingService.Repositories;
 using BookingService.Services;
 using BookingService.Middleware;
 using MongoDB.Driver;
+using Prometheus;
 
 LoadDotEnv();
 
@@ -36,6 +37,7 @@ builder.Services.Configure<SmtpSettings>(
 builder.Services.AddScoped<IEmailService, global::BookingService.Services.EmailService>();
 
 builder.Services.AddControllers();
+builder.Services.AddHealthChecks();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
@@ -44,7 +46,10 @@ var app = builder.Build();
 app.UseSwagger();
 app.UseSwaggerUI();
 
+app.UseHttpMetrics();
 app.UseMiddleware<UserIdentityMiddleware>();
+app.MapHealthChecks("/health");
+app.MapMetrics();
 app.MapControllers();
 
 app.Run();

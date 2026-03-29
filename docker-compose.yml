@@ -1,0 +1,261 @@
+services:
+  kafka:
+    image: confluentinc/cp-kafka:7.6.1
+    container_name: eventzen-kafka
+    restart: unless-stopped
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,EXTERNAL:PLAINTEXT
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,EXTERNAL://0.0.0.0:9094,CONTROLLER://0.0.0.0:9093
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,EXTERNAL://localhost:9094
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      CLUSTER_ID: MkU3OEVBNTcwNTJENDM2Qk
+    expose:
+      - "9092"
+    ports:
+      - "9094:9094"
+
+  auth-service:
+    build:
+      context: ./backend/auth-service
+    container_name: eventzen-auth-service
+    restart: unless-stopped
+    environment:
+      MONGODB_URI: "${MONGO_ATLAS_URI:?Set MONGO_ATLAS_URI in root .env}"
+      JWT_SECRET: "${JWT_SECRET:?Set JWT_SECRET in root .env}"
+      JWT_REFRESH_SECRET: "${JWT_REFRESH_SECRET:?Set JWT_REFRESH_SECRET in root .env}"
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-1d}
+      JWT_REFRESH_EXPIRES_IN: ${JWT_REFRESH_EXPIRES_IN:-1h}
+      JWT_PASSWORD_RESET_EXPIRES_IN: ${JWT_PASSWORD_RESET_EXPIRES_IN:-15m}
+      BCRYPT_SALT_ROUNDS: ${BCRYPT_SALT_ROUNDS:-10}
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:5173}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:5173,http://192.168.0.244:5173}
+      EVENT_SERVICE_URL: http://event-service:8080
+      KAFKA_BROKER: kafka:9092
+      # SMTP (Nodemailer)
+      SMTP_HOST: ${SMTP_HOST:-smtp.gmail.com}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: "${SMTP_USER:?Set SMTP_USER in root .env}"
+      SMTP_PASS: "${SMTP_PASS:?Set SMTP_PASS in root .env}"
+      SMTP_FROM: "${SMTP_FROM:-${SMTP_USER}}"
+      # Cloudinary
+      CLOUDINARY_CLOUD_NAME: "${CLOUDINARY_CLOUD_NAME:?Set CLOUDINARY_CLOUD_NAME in root .env}"
+      CLOUDINARY_API_KEY: "${CLOUDINARY_API_KEY:?Set CLOUDINARY_API_KEY in root .env}"
+      CLOUDINARY_API_SECRET: "${CLOUDINARY_API_SECRET:?Set CLOUDINARY_API_SECRET in root .env}"
+    expose:
+      - "3001"
+    depends_on:
+      kafka:
+        condition: service_started
+
+  event-service:
+    build:
+      context: ./backend/event-service
+    container_name: eventzen-event-service
+    restart: unless-stopped
+    environment:
+      MONGO_URI: "${MONGO_ATLAS_URI:?Set MONGO_ATLAS_URI in root .env}"
+      MONGO_DATABASE: ${MONGO_DATABASE:-eventzen}
+      SERVER_PORT: 8080
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      # Groq AI
+      GROQ_API_KEY: "${GROQ_API_KEY:?Set GROQ_API_KEY in root .env}"
+      GROQ_MODEL: ${GROQ_MODEL:-llama-3.3-70b-versatile}
+      KAFKA_BROKER: kafka:9092
+      BOOKING_SERVICE_URL: http://booking-service:5000
+    expose:
+      - "8080"
+    depends_on:
+      kafka:
+        condition: service_started
+
+  budget-service:
+    build:
+      context: ./backend/budget-service
+    container_name: eventzen-budget-service
+    restart: unless-stopped
+    environment:
+      MONGO_URI: "${MONGO_ATLAS_URI:?Set MONGO_ATLAS_URI in root .env}"
+      MONGO_DATABASE: ${MONGO_DATABASE:-eventzen}
+      SERVER_PORT: 8081
+      EVENT_SERVICE_BASE_URL: http://event-service:8080
+      KAFKA_BROKER: kafka:9092
+    expose:
+      - "8081"
+
+  booking-service:
+    build:
+      context: ./backend/booking-service
+    container_name: eventzen-booking-service
+    restart: unless-stopped
+    environment:
+      ASPNETCORE_URLS: http://+:5000
+      MongoDbSettings__ConnectionString: "${MONGO_ATLAS_URI:?Set MONGO_ATLAS_URI in root .env}"
+      MongoDbSettings__DatabaseName: ${MONGO_DATABASE:-test}
+      EventServiceBaseUrl: http://event-service:8080
+      AuthServiceBaseUrl: http://auth-service:3001
+      KAFKA_BROKER: kafka:9092
+      # SMTP (MailKit)
+      SmtpSettings__Host: ${SMTP_HOST:-smtp.gmail.com}
+      SmtpSettings__Port: ${SMTP_PORT:-587}
+      SmtpSettings__User: "${SMTP_USER:?Set SMTP_USER in root .env}"
+      SmtpSettings__Password: "${SMTP_PASS:?Set SMTP_PASS in root .env}"
+      SmtpSettings__From: "${SMTP_FROM:-${SMTP_USER}}"
+      SmtpSettings__DisplayName: ${SMTP_DISPLAY_NAME:-EventZen}
+    depends_on:
+      auth-service:
+        condition: service_started
+      event-service:
+        condition: service_started
+      kafka:
+        condition: service_started
+    expose:
+      - "5000"
+
+  payment-service:
+    build:
+      context: ./backend/payment-service
+    container_name: eventzen-payment-service
+    restart: unless-stopped
+    environment:
+      PORT: 3002
+      EVENT_SERVICE_URL: http://event-service:8080
+      PAYMENT_CURRENCY: ${PAYMENT_CURRENCY:-INR}
+      CONVENIENCE_FEE_PERCENT: ${CONVENIENCE_FEE_PERCENT:-0}
+      MONGODB_URI: "${MONGO_ATLAS_URI:?Set MONGO_ATLAS_URI in root .env}"
+      RAZORPAY_KEY_ID: "${RAZORPAY_KEY_ID:?Set RAZORPAY_KEY_ID in root .env}"
+      RAZORPAY_KEY_SECRET: "${RAZORPAY_KEY_SECRET:?Set RAZORPAY_KEY_SECRET in root .env}"
+      KAFKA_BROKER: kafka:9092
+    depends_on:
+      event-service:
+        condition: service_started
+      kafka:
+        condition: service_started
+    expose:
+      - "3002"
+
+  notification-service:
+    build:
+      context: ./backend/notification-service
+    container_name: eventzen-notification-service
+    restart: unless-stopped
+    environment:
+      PORT: 3003
+      MONGODB_URI: "${MONGO_ATLAS_URI:?Set MONGO_ATLAS_URI in root .env}"
+      KAFKA_BROKER: kafka:9092
+      KAFKA_CONSUMER_GROUP: eventzen-notification-consumer-group
+      KAFKA_CONNECT_RETRY_MS: 5000
+    depends_on:
+      kafka:
+        condition: service_started
+    expose:
+      - "3003"
+
+  api-gateway:
+    build:
+      context: ./backend/api-gateway
+    container_name: eventzen-api-gateway
+    restart: unless-stopped
+    environment:
+      PORT: 3000
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:5173}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:5173,http://192.168.0.244:5173}
+      JWT_SECRET: "${JWT_SECRET:?Set JWT_SECRET in root .env}"
+      AUTH_SERVICE_URL: http://auth-service:3001
+      EVENT_SERVICE_URL: http://event-service:8080
+      BOOKING_SERVICE_URL: http://booking-service:5000
+      BUDGET_SERVICE_URL: http://budget-service:8081
+      PAYMENT_SERVICE_URL: http://payment-service:3002
+      NOTIFICATION_SERVICE_URL: http://notification-service:3003
+      AUTH_RATE_LIMIT_WINDOW_MS: ${AUTH_RATE_LIMIT_WINDOW_MS:-900000}
+      AUTH_RATE_LIMIT_MAX_ATTEMPTS: ${AUTH_RATE_LIMIT_MAX_ATTEMPTS:-10}
+      AUTH_OTP_RATE_LIMIT_MAX_ATTEMPTS: ${AUTH_OTP_RATE_LIMIT_MAX_ATTEMPTS:-5}
+    depends_on:
+      auth-service:
+        condition: service_started
+      event-service:
+        condition: service_started
+      budget-service:
+        condition: service_started
+      booking-service:
+        condition: service_started
+      payment-service:
+        condition: service_started
+      notification-service:
+        condition: service_started
+    ports:
+      - "3000:3000"
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        VITE_BACKEND_URL: /
+    container_name: eventzen-frontend
+    restart: unless-stopped
+    depends_on:
+      api-gateway:
+        condition: service_started
+    ports:
+      - "5173:80"
+
+  prometheus:
+    image: prom/prometheus:v2.55.1
+    container_name: eventzen-prometheus
+    profiles: [ "monitoring" ]
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+      - "--web.enable-lifecycle"
+    volumes:
+      - ./monitoring/prometheus/prometheus.docker.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    depends_on:
+      api-gateway:
+        condition: service_started
+      auth-service:
+        condition: service_started
+      event-service:
+        condition: service_started
+      budget-service:
+        condition: service_started
+      booking-service:
+        condition: service_started
+      payment-service:
+        condition: service_started
+      notification-service:
+        condition: service_started
+    ports:
+      - "9090:9090"
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana:11.2.2
+    container_name: eventzen-grafana
+    profiles: [ "monitoring" ]
+    depends_on:
+      prometheus:
+        condition: service_started
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+    volumes:
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - grafana_data:/var/lib/grafana
+    ports:
+      - "3100:3000"
+    restart: unless-stopped
+
+volumes:
+  prometheus_data:
+  grafana_data:

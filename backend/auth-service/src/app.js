@@ -2,6 +2,7 @@ const express = require("express");
 const cors = require("cors");
 const path = require("path");
 const authRoutes = require("./routes/auth.routes");
+const { metricsMiddleware, metricsEndpoint } = require("./monitoring/metrics");
 
 const app = express();
 
@@ -39,7 +40,10 @@ const corsOptions = {
 
 app.use(cors(corsOptions));
 app.options(/.*/, cors(corsOptions));
+app.use(metricsMiddleware);
 app.use(express.json());
+
+app.get("/metrics", metricsEndpoint);
 
 // Routes
 app.use("/", authRoutes);
