@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { Users } from "lucide-react";
+import { Users, Ticket } from "lucide-react";
 import { motion } from "framer-motion";
 
 import { fadeUp } from "@/lib/animations";
@@ -29,11 +29,17 @@ export function EventBookingPanel({
   seatPercentage,
   setSeatCount,
   confirmedSeats,
+  selectedTicketType,
+  onSelectTicketType,
 }) {
   const parsedSeatCount = Number(seatCount);
   const maxSelectableSeats = Math.max(Math.min(availableSeats, maxTicketsPerBooking), 1);
   const exceedsPerBookingLimit = Number.isFinite(parsedSeatCount) && parsedSeatCount > maxTicketsPerBooking;
   const exceedsAvailability = Number.isFinite(parsedSeatCount) && parsedSeatCount > availableSeats;
+
+  const ticketTypes = Array.isArray(event?.ticketTypes) && event.ticketTypes.length > 0
+    ? event.ticketTypes
+    : null;
 
   return (
     <motion.aside
@@ -68,7 +74,44 @@ export function EventBookingPanel({
         <p className="text-xs text-slate-500">{seatPercentage}% booked</p>
       </div>
 
-      <form noValidate onSubmit={handleBook} className="mt-5 space-y-3">
+      <form noValidate onSubmit={handleBook} className="mt-5 space-y-4">
+        {/* Ticket Type Selector */}
+        {ticketTypes ? (
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-slate-700">Select ticket type</label>
+            <div className="flex flex-col gap-2">
+              {ticketTypes.map((tt) => {
+                const isSelected = selectedTicketType?.id === tt.id;
+                return (
+                  <button
+                    key={tt.id}
+                    type="button"
+                    onClick={() => onSelectTicketType(tt)}
+                    className={`flex items-center justify-between gap-3 rounded-xl border px-4 py-3 text-left text-sm transition-all ${
+                      isSelected
+                        ? "border-primary bg-primary/5 ring-2 ring-primary/20"
+                        : "border-slate-200 bg-white hover:border-primary/40 hover:shadow-sm"
+                    }`}
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <Ticket className={`h-4 w-4 ${isSelected ? "text-primary" : "text-slate-400"}`} />
+                      <div>
+                        <p className={`font-semibold ${isSelected ? "text-primary" : "text-slate-800"}`}>{tt.name}</p>
+                        {tt.description ? (
+                          <p className="text-[11px] text-slate-400">{tt.description}</p>
+                        ) : null}
+                      </div>
+                    </div>
+                    <span className={`text-sm font-bold whitespace-nowrap ${isSelected ? "text-primary" : "text-slate-700"}`}>
+                      {formatCurrency(tt.price)}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        ) : null}
+
         <label className="flex flex-col gap-1 text-sm text-slate-700">
           <span className="font-medium">Seat count</span>
           <input
@@ -92,6 +135,11 @@ export function EventBookingPanel({
           <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3">
             <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-emerald-700">Payment Summary</p>
             <div className="space-y-1.5 text-sm text-slate-700">
+              {selectedTicketType ? (
+                <p className="flex items-center justify-between gap-2 text-xs text-slate-500">
+                  <span>Ticket: {selectedTicketType.name}</span>
+                </p>
+              ) : null}
               <p className="flex items-center justify-between gap-2">
                 <span>Ticket Price ({paymentBreakdown.seatCount} x {formatCurrency(paymentBreakdown.ticketPrice)})</span>
                 <span>{formatCurrency(paymentBreakdown.baseAmount)}</span>

@@ -28,6 +28,7 @@ export function EventEditorDialog({
   submitting,
   uploadingImages,
   venues,
+  vendors = [],
   allEvents = [],
 }) {
   return (
@@ -47,6 +48,7 @@ export function EventEditorDialog({
             form={form}
             setForm={setForm}
             venues={venues}
+            vendors={vendors}
             isAdmin={isAdmin}
             editingId={editingId}
             submitting={submitting}

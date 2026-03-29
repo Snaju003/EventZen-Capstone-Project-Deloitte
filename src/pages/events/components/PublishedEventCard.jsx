@@ -40,10 +40,27 @@ export function PublishedEventCard({ event, index, venue }) {
       <div className="space-y-2 text-sm text-slate-600">
         <p className="flex items-center gap-2"><Calendar className="h-4 w-4" /> {formatEventsPageDateTime(event.startTime)}</p>
         <p className="flex items-center gap-2"><MapPin className="h-4 w-4" /> {venue?.name || "Venue unavailable"} - {venue?.address || ""}</p>
-        <p className="flex items-center gap-2"><Ticket className="h-4 w-4" /> {formatINR(event.ticketPrice)} per ticket</p>
+        <p className="flex items-center gap-2">
+          <Ticket className="h-4 w-4" />
+          {Array.isArray(event.ticketTypes) && event.ticketTypes.length > 0
+            ? `From ${formatINR(Math.min(...event.ticketTypes.map((tt) => Number(tt.price || 0))))}`
+            : `${formatINR(event.ticketPrice)} per ticket`
+          }
+        </p>
       </div>
 
-      <div className="mt-4 flex justify-end">
+      <div className="mt-4 flex items-center justify-between">
+        {event.registrationOpen ? (
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-[11px] font-semibold text-emerald-700">
+            <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+            Registration Open
+          </span>
+        ) : (
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-red-200 bg-red-50 px-2.5 py-1 text-[11px] font-semibold text-red-600">
+            <span className="h-1.5 w-1.5 rounded-full bg-red-400" />
+            Registration Closed
+          </span>
+        )}
         <Link
           to={`/events/${event.id}`}
           aria-label={`View details for ${event.title || "this event"}`}

@@ -1,72 +1,10 @@
-import { useEffect, useState } from "react";
-import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
-import L from "leaflet";
-import "leaflet/dist/leaflet.css";
 import { Calendar, Clock, ExternalLink, MapPin, Navigation, QrCode, Ticket, Users } from "lucide-react";
 
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
-// Fix default Leaflet marker icon in bundled environments
-delete L.Icon.Default.prototype._getIconUrl;
-L.Icon.Default.mergeOptions({
-  iconRetinaUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
-  iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
-  shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
-});
-
 function VenueMap({ address }) {
-  const [coords, setCoords] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(false);
-
-  useEffect(() => {
-    if (!address) {
-      setLoading(false);
-      setError(true);
-      return;
-    }
-
-    let cancelled = false;
-    setLoading(true);
-    setError(false);
-
-    (async () => {
-      try {
-        const res = await fetch(
-          `https://photon.komoot.io/api/?q=${encodeURIComponent(address)}&limit=1`
-        );
-        const data = await res.json();
-
-        if (cancelled) return;
-
-        if (data.features && data.features.length > 0) {
-          const [lng, lat] = data.features[0].geometry.coordinates;
-          setCoords({ lat, lng });
-        } else {
-          setError(true);
-        }
-      } catch {
-        if (!cancelled) setError(true);
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    })();
-
-    return () => { cancelled = true; };
-  }, [address]);
-
-  if (loading) {
-    return (
-      <div className="flex h-full items-center justify-center rounded-xl bg-slate-50">
-        <div className="flex flex-col items-center gap-2 text-slate-400">
-          <Navigation className="h-6 w-6 animate-pulse" />
-          <span className="text-xs font-medium">Loading map...</span>
-        </div>
-      </div>
-    );
-  }
-
-  if (error || !coords) {
+  const normalizedAddress = (address || "").trim();
+  if (!normalizedAddress || normalizedAddress.toLowerCase() === "venue details unavailable") {
     return (
       <div className="flex h-full items-center justify-center rounded-xl bg-slate-50">
         <div className="flex flex-col items-center gap-2 text-slate-400">
@@ -77,24 +15,20 @@ function VenueMap({ address }) {
     );
   }
 
+  const mapEmbedSrc = `https://www.google.com/maps?q=${encodeURIComponent(normalizedAddress)}&output=embed`;
+  const directionsHref = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(normalizedAddress)}`;
+
   return (
     <div className="relative h-full w-full overflow-hidden rounded-xl">
-      <MapContainer
-        center={[coords.lat, coords.lng]}
-        zoom={15}
-        scrollWheelZoom={false}
-        style={{ height: "100%", width: "100%", borderRadius: "0.75rem" }}
-      >
-        <TileLayer
-          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-        />
-        <Marker position={[coords.lat, coords.lng]}>
-          <Popup>{address}</Popup>
-        </Marker>
-      </MapContainer>
+      <iframe
+        title={`Map for ${normalizedAddress}`}
+        src={mapEmbedSrc}
+        loading="lazy"
+        referrerPolicy="no-referrer-when-downgrade"
+        className="h-full w-full border-0"
+      />
       <a
-        href={`https://www.google.com/maps/dir/?api=1&destination=${coords.lat},${coords.lng}`}
+        href={directionsHref}
         target="_blank"
         rel="noopener noreferrer"
         className="absolute bottom-2 right-2 z-[1000] flex items-center gap-1.5 rounded-lg bg-white/95 px-2.5 py-1.5 text-[11px] font-semibold text-slate-700 shadow-md backdrop-blur transition-all hover:bg-white hover:shadow-lg"

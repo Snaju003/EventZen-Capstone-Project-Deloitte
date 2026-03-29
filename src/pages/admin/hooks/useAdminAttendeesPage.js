@@ -22,8 +22,14 @@ export function useAdminAttendeesPage(id) {
 
     setIsLoading(true);
     try {
-      const [eventData, attendeesData] = await Promise.all([
-        getEventById(id),
+      const [eventResult, attendeesData] = await Promise.all([
+        getEventById(id).then((data) => ({ data, notFound: false })).catch((error) => {
+          if (Number(error?.response?.status) === 404) {
+            return { data: null, notFound: true };
+          }
+
+          throw error;
+        }),
         getEventAttendees(id),
       ]);
 
@@ -39,8 +45,12 @@ export function useAdminAttendeesPage(id) {
         usersById = buildUsersById(users);
       }
 
-      setEvent(eventData);
+      setEvent(eventResult.data);
       setAttendees(enrichAttendees(attendeesData, usersById));
+
+      if (eventResult.notFound) {
+        toast("Event details unavailable, but attendee data is loaded.", { icon: "ℹ️" });
+      }
     } catch (error) {
       toast.error(getApiErrorMessage(error, "Failed to load attendees."));
       setEvent(null);

@@ -1,10 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { CloudUpload, DollarSign, FileText, ImageIcon, Info, Sparkles, Tag, Users, X } from "lucide-react";
+import { CloudUpload, DollarSign, FileText, ImageIcon, Info, Sparkles, Tag, Wallet, X } from "lucide-react";
 
 import { generateEventDescription } from "@/lib/events-api";
 
 import { EventDateTimePicker } from "@/pages/admin/components/event-form/EventDateTimePicker";
 import { EventFieldLabel } from "@/pages/admin/components/event-form/EventFieldLabel";
+import { EventTicketTypesEditor } from "@/pages/admin/components/event-form/EventTicketTypesEditor";
+import { EventVendorDropdown } from "@/pages/admin/components/event-form/EventVendorDropdown";
 import { EventVenueDropdown } from "@/pages/admin/components/event-form/EventVenueDropdown";
 
 function FormSectionDivider({ title }) {
@@ -23,6 +25,7 @@ export function EventFormDialog({
   form,
   setForm,
   venues,
+  vendors = [],
   isAdmin,
   editingId,
   submitting,
@@ -192,32 +195,12 @@ export function EventFormDialog({
         required
       />
 
-      <FormSectionDivider title="Capacity & Pricing" />
+      <FormSectionDivider title="Ticket Types & Pricing" />
 
-      <div className="flex flex-col gap-1">
-        <EventFieldLabel icon={DollarSign} label="Ticket Price (INR)" hint="Set to 0 for a free event" required />
-        <input
-          type="number"
-          min="0"
-          step="0.01"
-          value={form.ticketPrice}
-          onChange={(event) => setForm((previous) => ({ ...previous, ticketPrice: event.target.value }))}
-          placeholder="e.g. 499"
-          className="h-10 w-full rounded-xl border border-slate-200 bg-white px-3.5 text-sm text-slate-800 shadow-sm outline-none transition-all placeholder:text-slate-400 focus:border-primary focus:ring-2 focus:ring-primary/20"
-          required
-        />
-      </div>
-
-      <div className="flex flex-col gap-1">
-        <EventFieldLabel icon={Users} label="Maximum Attendees" hint="Total seat capacity for this event" required />
-        <input
-          type="number"
-          min="1"
-          value={form.maxAttendees}
-          onChange={(event) => setForm((previous) => ({ ...previous, maxAttendees: event.target.value }))}
-          placeholder="e.g. 200"
-          className="h-10 w-full rounded-xl border border-slate-200 bg-white px-3.5 text-sm text-slate-800 shadow-sm outline-none transition-all placeholder:text-slate-400 focus:border-primary focus:ring-2 focus:ring-primary/20"
-          required
+      <div className="md:col-span-2">
+        <EventTicketTypesEditor
+          ticketTypes={form.ticketTypes || []}
+          onChange={(ticketTypes) => setForm((previous) => ({ ...previous, ticketTypes }))}
         />
       </div>
 
@@ -235,6 +218,49 @@ export function EventFormDialog({
             required
           />
         </div>
+      ) : null}
+
+      {isAdmin ? (
+        <>
+          <FormSectionDivider title="Vendor Assignment" />
+
+          <div className="flex flex-col gap-1">
+            <EventVendorDropdown
+              vendors={vendors}
+              value={form.vendorId}
+              onChange={(vendorId) => setForm((previous) => ({ ...previous, vendorId }))}
+              required
+            />
+          </div>
+
+          <div className="flex flex-col gap-1">
+            <EventFieldLabel icon={DollarSign} label="Agreed Vendor Cost (INR)" hint="The cost agreed with the vendor for their services" required />
+            <input
+              type="number"
+              min="0"
+              step="0.01"
+              value={form.agreedCost}
+              onChange={(event) => setForm((previous) => ({ ...previous, agreedCost: event.target.value }))}
+              placeholder="e.g. 25000"
+              className="h-10 w-full rounded-xl border border-slate-200 bg-white px-3.5 text-sm text-slate-800 shadow-sm outline-none transition-all placeholder:text-slate-400 focus:border-primary focus:ring-2 focus:ring-primary/20"
+              required
+            />
+          </div>
+
+          <div className="flex flex-col gap-1 md:col-span-2">
+            <EventFieldLabel icon={Wallet} label="Total Event Budget (INR)" hint="Overall budget allocated for this event" required />
+            <input
+              type="number"
+              min="0"
+              step="0.01"
+              value={form.totalBudget}
+              onChange={(event) => setForm((previous) => ({ ...previous, totalBudget: event.target.value }))}
+              placeholder="e.g. 100000"
+              className="h-10 w-full rounded-xl border border-slate-200 bg-white px-3.5 text-sm text-slate-800 shadow-sm outline-none transition-all placeholder:text-slate-400 focus:border-primary focus:ring-2 focus:ring-primary/20"
+              required
+            />
+          </div>
+        </>
       ) : null}
 
       <div className="md:col-span-2">

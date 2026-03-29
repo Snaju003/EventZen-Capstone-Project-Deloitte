@@ -1,4 +1,4 @@
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import {
   Edit,
   Ban,
@@ -62,32 +62,22 @@ function getStatusBadge(status) {
 }
 
 export function AdminEventCard({
-  assignmentDraft,
   event,
   isAdmin,
-  onApproveVendor,
-  onAssignmentChange,
-  onAssignVendor,
   onCancelEvent,
   onDeleteEvent,
   onEdit,
   onOpenPublishDialog,
   onOpenRejectDialog,
   onRemoveVendor,
+  onToggleRegistration,
   venueMap,
   vendorMap,
-  vendors,
 }) {
   const navigate = useNavigate();
   const normalizedStatus = (event.status || "draft").toLowerCase();
   const { label: statusBadgeLabel, className: statusBadgeClass } = getStatusBadge(normalizedStatus);
-
-  const hasVendorAssignments = Array.isArray(event.vendors) && event.vendors.length > 0;
-  const hasCreatorVendorAssignment = hasVendorAssignments && event.vendors.some((assignedVendor) => {
-    const vendorUserId = vendorMap.get(assignedVendor.vendorId)?.userId;
-    return Boolean(vendorUserId) && vendorUserId === event.createdBy;
-  });
-  const shouldShowVendorControls = isAdmin && !hasCreatorVendorAssignment;
+  const isRegistrationOpen = Boolean(event.registrationOpen);
 
   return (
     <article className="rounded-xl border border-slate-200 bg-white p-4">
@@ -231,55 +221,28 @@ export function AdminEventCard({
         </div>
       </div>
 
-      <div className="mt-4 space-y-2">
-        {shouldShowVendorControls ? (
-          <div className="grid grid-cols-1 gap-2">
-            <select
-              aria-label={`Select vendor for ${event.title || "event"}`}
-              value={assignmentDraft?.vendorId || ""}
-              onChange={(inputEvent) => onAssignmentChange(event.id, { vendorId: inputEvent.target.value })}
-              className="h-10 rounded-md border border-slate-200 px-2"
-            >
-              <option value="">Select vendor</option>
-              {vendors.map((vendor) => (
-                <option key={vendor.id} value={vendor.id}>{vendor.name}</option>
-              ))}
-            </select>
-            <input
-              aria-label={`Agreed vendor cost for ${event.title || "event"}`}
-              type="number"
-              min="0"
-              step="0.01"
-              value={assignmentDraft?.agreedCost || ""}
-              onChange={(inputEvent) => onAssignmentChange(event.id, { agreedCost: inputEvent.target.value })}
-              placeholder="Agreed cost"
-              className="h-10 rounded-md border border-slate-200 px-2"
-            />
-            <button
-              type="button"
-              onClick={() => onAssignVendor(event.id)}
-              aria-label={`Assign selected vendor to ${event.title || "event"}`}
-              className="h-10 rounded-md border border-slate-200 px-3 text-sm font-medium"
-            >
-              Assign vendor
-            </button>
-            <button
-              type="button"
-              onClick={() => onApproveVendor(event.id)}
-              aria-label={`Set approved vendor for ${event.title || "event"}`}
-              className="h-10 rounded-md border border-emerald-200 bg-emerald-50 px-3 text-sm font-medium text-emerald-700"
-            >
-              Set Approved Vendor
-            </button>
+      {normalizedStatus === "published" ? (
+        <div className="mt-3 flex items-center justify-between rounded-lg border border-slate-100 bg-slate-50/60 px-3 py-2">
+          <div className="flex flex-col">
+            <span className="text-xs font-semibold text-slate-700">Registration</span>
+            <span className={`text-[11px] font-medium ${isRegistrationOpen ? "text-emerald-600" : "text-slate-400"}`}>
+              {isRegistrationOpen ? "Open for bookings" : "Closed"}
+            </span>
           </div>
-        ) : null}
-
-        {isAdmin && hasCreatorVendorAssignment ? (
-          <p className="rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-800">
-            Vendor and agreed cost were provided by the event creator. No additional assignment is needed.
-          </p>
-        ) : null}
-      </div>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={isRegistrationOpen}
+            aria-label={`Toggle registration for ${event.title || "event"}`}
+            onClick={() => onToggleRegistration(event.id)}
+            className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:ring-offset-1 ${isRegistrationOpen ? "bg-emerald-500" : "bg-slate-300"}`}
+          >
+            <span
+              className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-sm ring-0 transition-transform duration-200 ${isRegistrationOpen ? "translate-x-5" : "translate-x-0.5"}`}
+            />
+          </button>
+        </div>
+      ) : null}
 
       {isAdmin && event.vendors?.length ? (
         <div className="mt-3 flex flex-wrap gap-2">

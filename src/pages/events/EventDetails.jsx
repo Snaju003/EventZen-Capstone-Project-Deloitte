@@ -29,6 +29,8 @@ export default function EventDetails() {
     paymentBreakdown,
     seatCount,
     seatPercentage,
+    selectedTicketType,
+    setSelectedTicketType,
     setSeatCount,
     maxTicketsPerBooking,
   } = useEventDetailsPage(id, navigate);
@@ -89,6 +91,8 @@ export default function EventDetails() {
               paymentBreakdown={paymentBreakdown}
               seatCount={seatCount}
               seatPercentage={seatPercentage}
+              selectedTicketType={selectedTicketType}
+              onSelectTicketType={setSelectedTicketType}
               setSeatCount={setSeatCount}
             />
           </motion.div>

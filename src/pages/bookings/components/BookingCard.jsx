@@ -47,6 +47,9 @@ export function BookingCard({ booking, isCancelling, onCancel, onViewTicket, ind
                 <div className="flex items-center gap-1.5 text-sm"><Calendar className="w-4 h-4 opacity-70" />{booking.date}</div>
                 <div className="flex items-center gap-1.5 text-sm"><MapPin className="w-4 h-4 opacity-70" />{booking.location}</div>
                 <div className="flex items-center gap-1.5 text-sm"><Users className="w-4 h-4 opacity-70" />{booking.seats}</div>
+                {booking.ticketTypeName ? (
+                  <div className="flex items-center gap-1.5 text-sm"><Ticket className="w-4 h-4 opacity-70" />{booking.ticketTypeName}</div>
+                ) : null}
               </div>
             </div>
 

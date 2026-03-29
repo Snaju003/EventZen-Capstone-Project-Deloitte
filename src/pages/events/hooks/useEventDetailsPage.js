@@ -20,6 +20,10 @@ export function getCannotBookMessage(event, isAuthenticated, availableSeats) {
     return "This event is not open for booking.";
   }
 
+  if (!event?.registrationOpen) {
+    return "Registration is currently closed for this event.";
+  }
+
   if (availableSeats <= 0) {
     return "No seats left for this event.";
   }
@@ -33,6 +37,7 @@ export function useEventDetailsPage(id, navigate) {
   const [event, setEvent] = useState(null);
   const [confirmedSeats, setConfirmedSeats] = useState(0);
   const [seatCount, setSeatCount] = useState(1);
+  const [selectedTicketType, setSelectedTicketType] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isBooking, setIsBooking] = useState(false);
   const [error, setError] = useState("");
@@ -49,10 +54,18 @@ export function useEventDetailsPage(id, navigate) {
       const venueFromEvent = eventResponse?.venue;
       const venueFromLookup = venues.find((venue) => venue.id === eventResponse?.venueId);
 
-      setEvent({
+      const loadedEvent = {
         ...eventResponse,
         venue: venueFromEvent || venueFromLookup || null,
-      });
+      };
+
+      setEvent(loadedEvent);
+
+      // Auto-select first ticket type if available
+      const ticketTypes = Array.isArray(loadedEvent.ticketTypes) ? loadedEvent.ticketTypes : [];
+      if (ticketTypes.length > 0) {
+        setSelectedTicketType(ticketTypes[0]);
+      }
 
       try {
         const seatResponse = await getEventBookingCount(id);
@@ -77,12 +90,20 @@ export function useEventDetailsPage(id, navigate) {
   const seatPercentage = maxAttendees > 0 ? Math.round((confirmedSeats / maxAttendees) * 100) : 0;
 
   const canBook = useMemo(
-    () => isAuthenticated && event?.status === "published" && availableSeats > 0 && user?.role === "customer",
-    [availableSeats, event?.status, isAuthenticated, user?.role],
+    () => isAuthenticated && event?.status === "published" && Boolean(event?.registrationOpen) && availableSeats > 0 && user?.role === "customer",
+    [availableSeats, event?.status, event?.registrationOpen, isAuthenticated, user?.role],
   );
 
+  // Resolve ticket price from selected ticket type or fallback to event.ticketPrice
+  const resolvedTicketPrice = useMemo(() => {
+    if (selectedTicketType?.price != null) {
+      return Number(selectedTicketType.price);
+    }
+    return Number(event?.ticketPrice || 0);
+  }, [selectedTicketType, event?.ticketPrice]);
+
   const paymentBreakdown = useMemo(() => {
-    const ticketPrice = Number(event?.ticketPrice || 0);
+    const ticketPrice = resolvedTicketPrice;
     const parsedSeats = Number(seatCount) || 0;
 
     if (!ticketPrice || parsedSeats < 1) {
@@ -101,7 +122,7 @@ export function useEventDetailsPage(id, navigate) {
       totalAmount,
       seatCount: parsedSeats,
     };
-  }, [event?.ticketPrice, seatCount]);
+  }, [resolvedTicketPrice, seatCount]);
 
   const handleBook = async (submitEvent) => {
     submitEvent.preventDefault();
@@ -123,9 +144,20 @@ export function useEventDetailsPage(id, navigate) {
       return;
     }
 
+    // Require ticket type selection if event has ticket types
+    const hasTicketTypes = Array.isArray(event?.ticketTypes) && event.ticketTypes.length > 0;
+    if (hasTicketTypes && !selectedTicketType) {
+      toast.error("Please select a ticket type.");
+      return;
+    }
+
     setIsBooking(true);
     try {
-      const paymentOrder = await createPaymentOrder({ eventId: id, seatCount: parsedSeats });
+      const paymentOrder = await createPaymentOrder({
+        eventId: id,
+        seatCount: parsedSeats,
+        ticketTypeId: selectedTicketType?.id || undefined,
+      });
 
       const paymentResult = await openRazorpayCheckout({
         key: paymentOrder?.keyId,
@@ -133,7 +165,7 @@ export function useEventDetailsPage(id, navigate) {
         currency: paymentOrder?.currency || "INR",
         orderId: paymentOrder?.orderId,
         name: "EventZen",
-        description: `${parsedSeats} seat${parsedSeats > 1 ? "s" : ""} for ${event?.title || "event"}`,
+        description: `${parsedSeats} seat${parsedSeats > 1 ? "s" : ""}${selectedTicketType ? ` (${selectedTicketType.name})` : ""} for ${event?.title || "event"}`,
         prefill: {
           name: user?.name || "",
           email: user?.email || "",
@@ -146,7 +178,12 @@ export function useEventDetailsPage(id, navigate) {
         seatCount: parsedSeats,
       });
 
-      await createBooking({ eventId: id, seatCount: parsedSeats });
+      await createBooking({
+        eventId: id,
+        seatCount: parsedSeats,
+        ticketTypeId: selectedTicketType?.id || undefined,
+        ticketTypeName: selectedTicketType?.name || undefined,
+      });
       toast.success("Payment successful and booking confirmed.");
       navigate("/my-bookings");
     } catch (bookingError) {
@@ -172,6 +209,8 @@ export function useEventDetailsPage(id, navigate) {
     paymentBreakdown,
     seatCount,
     seatPercentage,
+    selectedTicketType,
+    setSelectedTicketType,
     setSeatCount,
     user,
     maxTicketsPerBooking: MAX_TICKETS_PER_BOOKING,

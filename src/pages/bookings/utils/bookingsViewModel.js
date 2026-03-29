@@ -22,8 +22,21 @@ export function formatDateTime(value) {
 
 export function toBookingViewModel(booking, event, venue) {
   const status = (booking.status || "").toUpperCase();
-  const ticketPrice = Number(event?.ticketPrice ?? 0);
   const seatCount = Number(booking.seatCount ?? 0);
+
+  // Resolve the per-ticket price: match by ticketTypeId if the event has ticket types,
+  // otherwise fall back to the flat event.ticketPrice (legacy events).
+  let ticketPrice = Number(event?.ticketPrice ?? 0);
+  let ticketTypeName = booking.ticketTypeName || null;
+
+  if (booking.ticketTypeId && Array.isArray(event?.ticketTypes) && event.ticketTypes.length > 0) {
+    const matchedType = event.ticketTypes.find((tt) => tt.id === booking.ticketTypeId);
+    if (matchedType) {
+      ticketPrice = Number(matchedType.price ?? 0);
+      ticketTypeName = matchedType.name || ticketTypeName;
+    }
+  }
+
   const baseAmount = ticketPrice * seatCount;
   const convenienceFee = baseAmount * (CONVENIENCE_FEE_PERCENT / 100);
   const total = baseAmount + convenienceFee;
@@ -53,6 +66,7 @@ export function toBookingViewModel(booking, event, venue) {
     seats: `${seatCount} seat${seatCount === 1 ? "" : "s"}`,
     price: currencyFormatter.format(total),
     ticketPrice: currencyFormatter.format(baseAmount),
+    ticketTypeName: ticketTypeName || null,
     convenienceFee: currencyFormatter.format(convenienceFee),
     imageUrls: (
       Array.isArray(event?.imageUrls) && event.imageUrls.length

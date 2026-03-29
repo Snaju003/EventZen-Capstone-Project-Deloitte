@@ -94,6 +94,11 @@ export async function cancelEvent(eventId) {
   return response?.data || null;
 }
 
+export async function toggleEventRegistration(eventId) {
+  const response = await apiClient.post(`/events/${eventId}/toggle-registration`);
+  return response?.data || null;
+}
+
 export async function assignVendorToEvent(eventId, payload) {
   const response = await apiClient.post(`/events/${eventId}/vendors`, payload);
   return response?.data || null;

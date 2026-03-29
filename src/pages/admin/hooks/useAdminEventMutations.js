@@ -3,14 +3,13 @@ import toast from "react-hot-toast";
 import { getApiErrorMessage } from "@/lib/auth-api";
 import { updateBudget } from "@/lib/budget-api";
 import {
-  assignVendorToEvent,
-  approveEventVendor,
   cancelEvent,
   createEvent,
   deleteEvent,
   publishEvent,
   rejectEvent,
   removeVendorFromEvent,
+  toggleEventRegistration,
   updateEvent,
 } from "@/lib/events-api";
 import { uploadMediaImages } from "@/lib/media-api";
@@ -22,7 +21,6 @@ import {
 
 export function useAdminEventMutations(state) {
   const {
-    assignmentDrafts,
     closeFormDialog,
     editingId,
     form,
@@ -30,7 +28,6 @@ export function useAdminEventMutations(state) {
     publishDialog,
     rejectionDialog,
     runAction,
-    setAssignmentDrafts,
     setCurrentPage,
     setForm,
     setIsPublishing,
@@ -95,8 +92,6 @@ export function useAdminEventMutations(state) {
 
     const startDate = new Date(form.startTime);
     const endDate = new Date(form.endTime);
-    const ticketPrice = Number(form.ticketPrice);
-    const maxAttendees = Number(form.maxAttendees);
 
     if (Number.isNaN(startDate.getTime()) || Number.isNaN(endDate.getTime())) {
       toast.error("Please select valid event start and end times.");
@@ -108,24 +103,78 @@ export function useAdminEventMutations(state) {
       return;
     }
 
-    if (!Number.isFinite(ticketPrice) || ticketPrice < 0) {
-      toast.error("Ticket price must be a valid positive amount.");
+    // Validate ticket types
+    const ticketTypes = (form.ticketTypes || []).filter((tt) => tt.name?.trim());
+    if (ticketTypes.length === 0) {
+      toast.error("Please add at least one ticket type.");
       return;
     }
 
-    if (!Number.isFinite(maxAttendees) || maxAttendees < 1) {
-      toast.error("Max attendees must be at least 1.");
-      return;
+    for (const tt of ticketTypes) {
+      const price = Number(tt.price);
+      const qty = Number(tt.maxQuantity);
+      if (!Number.isFinite(price) || price < 0) {
+        toast.error(`Ticket "${tt.name}" needs a valid price.`);
+        return;
+      }
+      if (!Number.isFinite(qty) || qty < 1) {
+        toast.error(`Ticket "${tt.name}" needs at least 1 available seat.`);
+        return;
+      }
+    }
+
+    // Admin-specific validation for vendor assignment
+    if (state.isAdmin && !editingId) {
+      if (!form.vendorId) {
+        toast.error("Please select a vendor.");
+        return;
+      }
+      const agreedCost = Number(form.agreedCost);
+      if (!Number.isFinite(agreedCost) || agreedCost < 0) {
+        toast.error("Please provide a valid agreed vendor cost.");
+        return;
+      }
+      const totalBudget = Number(form.totalBudget);
+      if (!Number.isFinite(totalBudget) || totalBudget < 0) {
+        toast.error("Please provide a valid total budget.");
+        return;
+      }
     }
 
     setSubmitting(true);
     try {
-      const payload = { ...form, ticketPrice, maxAttendees, imageUrls: form.imageUrls };
+      const parsedTotalBudget = Number(form.totalBudget);
+      const hasValidAdminBudget = state.isAdmin && Number.isFinite(parsedTotalBudget) && parsedTotalBudget >= 0;
+
+      const normalizedTicketTypes = ticketTypes.map((tt) => ({
+        id: tt.id || undefined,
+        name: tt.name.trim(),
+        description: (tt.description || "").trim(),
+        price: Number(tt.price),
+        maxQuantity: Number(tt.maxQuantity),
+      }));
+
+      const payload = {
+        ...form,
+        ticketTypes: normalizedTicketTypes,
+        imageUrls: form.imageUrls,
+        ...(state.isAdmin ? {
+          vendorId: form.vendorId || undefined,
+          agreedCost: Number(form.agreedCost) || undefined,
+          totalBudget: Number(form.totalBudget) || undefined,
+        } : {}),
+      };
       if (editingId) {
         await updateEvent(editingId, payload);
+        if (hasValidAdminBudget) {
+          await updateBudget(editingId, parsedTotalBudget);
+        }
         toast.success("Event updated.");
       } else {
-        await createEvent(payload);
+        const createdEvent = await createEvent(payload);
+        if (hasValidAdminBudget && createdEvent?.id) {
+          await updateBudget(createdEvent.id, parsedTotalBudget);
+        }
         toast.success("Event created.");
       }
 
@@ -145,32 +194,6 @@ export function useAdminEventMutations(state) {
     }));
   };
 
-  const onAssignmentChange = (eventId, patch) => {
-    setAssignmentDrafts((previous) => ({ ...previous, [eventId]: { ...previous[eventId], ...patch } }));
-  };
-
-  const assignVendor = async (eventId) => {
-    const draft = assignmentDrafts[eventId] || {};
-    if (!draft.vendorId || !draft.agreedCost) {
-      toast.error("Select a vendor and agreed cost first.");
-      return;
-    }
-
-    await runAction(
-      () => assignVendorToEvent(eventId, { vendorId: draft.vendorId, agreedCost: Number(draft.agreedCost) }),
-      "Vendor assigned.",
-    );
-  };
-
-  const approveSelectedVendor = async (eventId) => {
-    const draft = assignmentDrafts[eventId] || {};
-    if (!draft.vendorId) {
-      toast.error("Select a vendor first to mark as approved.");
-      return;
-    }
-
-    await runAction(() => approveEventVendor(eventId, draft.vendorId), "Approved vendor selected.");
-  };
 
   const openRejectDialog = (event) => {
     setRejectionDialog({ open: true, eventId: event.id, eventTitle: event.title || "Untitled event", reason: "Please update event details and resubmit." });
@@ -234,9 +257,6 @@ export function useAdminEventMutations(state) {
     handleImageDrop,
     handleSubmit,
     removeImageAtIndex,
-    onAssignmentChange,
-    assignVendor,
-    approveSelectedVendor,
     openRejectDialog,
     closeRejectDialog,
     openPublishDialog,
@@ -251,5 +271,6 @@ export function useAdminEventMutations(state) {
     onCancelEvent: (eventId) => runAction(() => cancelEvent(eventId), "Event cancelled."),
     onDeleteEvent: (eventId) => runAction(() => deleteEvent(eventId), "Event deleted."),
     onRemoveVendor: (eventId, vendorId) => runAction(() => removeVendorFromEvent(eventId, vendorId), "Vendor removed."),
+    onToggleRegistration: (eventId) => runAction(() => toggleEventRegistration(eventId), "Registration status updated."),
   };
 }

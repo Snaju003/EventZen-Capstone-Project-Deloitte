@@ -4,6 +4,7 @@ import { MotionConfig } from "framer-motion";
 import "./index.css";
 import App from "@/App.jsx";
 import { AuthProvider } from "@/context/AuthContext";
+import { NotificationsProvider } from "@/context/NotificationsContext";
 import { BrowserRouter } from "react-router-dom";
 import { Toaster } from "react-hot-toast";
 
@@ -11,10 +12,12 @@ createRoot(document.getElementById("root")).render(
   <StrictMode>
     <BrowserRouter>
       <AuthProvider>
-        <MotionConfig reducedMotion="user">
-          <Toaster />
-          <App />
-        </MotionConfig>
+        <NotificationsProvider>
+          <MotionConfig reducedMotion="user">
+            <Toaster />
+            <App />
+          </MotionConfig>
+        </NotificationsProvider>
       </AuthProvider>
     </BrowserRouter>
   </StrictMode>,

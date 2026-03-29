@@ -4,9 +4,11 @@ export const initialEventForm = {
   venueId: "",
   startTime: "",
   endTime: "",
-  ticketPrice: "",
-  maxAttendees: "",
+  ticketTypes: [{ id: crypto.randomUUID(), name: "General Admission", description: "", price: "", maxQuantity: "" }],
   imageUrls: [],
+  vendorId: "",
+  agreedCost: "",
+  totalBudget: "",
 };
 
 export const emptyPageMeta = {

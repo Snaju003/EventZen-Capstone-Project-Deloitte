@@ -65,7 +65,13 @@ export function useEventsPage() {
         sortDir: filters.sortDir || "asc",
       });
 
-      setEvents(pageResponse.items);
+      const sortedItems = [...pageResponse.items].sort((a, b) => {
+        const aOpen = a.registrationOpen ? 1 : 0;
+        const bOpen = b.registrationOpen ? 1 : 0;
+        return bOpen - aOpen;
+      });
+
+      setEvents(sortedItems);
       setPagination({
         page: pageResponse.page,
         size: pageResponse.size,

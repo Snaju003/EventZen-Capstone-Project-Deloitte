@@ -3,23 +3,12 @@ import toast from "react-hot-toast";
 
 import { useAuth } from "@/hooks/useAuth";
 import { getApiErrorMessage } from "@/lib/auth-api";
-import { updateBudget } from "@/lib/budget-api";
 import {
-  assignVendorToEvent,
-  approveEventVendor,
-  cancelEvent,
-  createEvent,
-  deleteEvent,
   getEvents,
   getEventsPage,
   getVenues,
   getVendors,
-  publishEvent,
-  rejectEvent,
-  removeVendorFromEvent,
-  updateEvent,
 } from "@/lib/events-api";
-import { uploadMediaImages } from "@/lib/media-api";
 import {
   createDefaultPublishDialogState,
   createDefaultRejectionDialogState,
@@ -63,7 +52,7 @@ export function useAdminEventsPage() {
   const [editingId, setEditingId] = useState("");
   const [isFormDialogOpen, setIsFormDialogOpen] = useState(false);
   const [form, setForm] = useState(initialEventForm);
-  const [assignmentDrafts, setAssignmentDrafts] = useState({});
+
   const [statusFilter, setStatusFilter] = useState("all");
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
@@ -167,15 +156,35 @@ export function useAdminEventsPage() {
 
   const startEdit = (event) => {
     setEditingId(event.id);
+
+    // Backward compat: if event has no ticketTypes but has ticketPrice/maxAttendees, create a default entry
+    let ticketTypes = Array.isArray(event.ticketTypes) && event.ticketTypes.length > 0
+      ? event.ticketTypes.map((tt) => ({
+          id: tt.id || crypto.randomUUID(),
+          name: tt.name || "",
+          description: tt.description || "",
+          price: String(tt.price ?? ""),
+          maxQuantity: String(tt.maxQuantity ?? ""),
+        }))
+      : [{
+          id: crypto.randomUUID(),
+          name: "General Admission",
+          description: "",
+          price: String(event.ticketPrice ?? ""),
+          maxQuantity: String(event.maxAttendees ?? ""),
+        }];
+
     setForm({
       title: event.title || "",
       description: event.description || "",
       venueId: event.venueId || "",
       startTime: toDateTimeInputValue(event.startTime),
       endTime: toDateTimeInputValue(event.endTime),
-      ticketPrice: String(event.ticketPrice ?? ""),
-      maxAttendees: String(event.maxAttendees ?? ""),
+      ticketTypes,
       imageUrls: Array.isArray(event.imageUrls) ? event.imageUrls : [],
+      vendorId: event.approvedVendorId || (event.vendors?.[0]?.vendorId ?? ""),
+      agreedCost: String(event.vendors?.[0]?.agreedCost ?? ""),
+      totalBudget: String(event.budget?.totalBudget ?? ""),
     });
     setIsFormDialogOpen(true);
   };
@@ -204,7 +213,6 @@ export function useAdminEventsPage() {
     editingId,
     isFormDialogOpen,
     form,
-    assignmentDrafts,
     statusFilter,
     searchTerm,
     currentPage,
@@ -221,7 +229,6 @@ export function useAdminEventsPage() {
     setUploadingImages,
     setIsFormDialogOpen,
     setForm,
-    setAssignmentDrafts,
     setStatusFilter,
     setSearchTerm,
     setCurrentPage,

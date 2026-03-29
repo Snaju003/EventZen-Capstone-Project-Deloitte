@@ -18,6 +18,10 @@ function mapEventResults(eventIds, eventResults) {
   return eventMap;
 }
 
+function isNotFoundError(error) {
+  return Number(error?.response?.status) === 404;
+}
+
 export function useBookingsPage() {
   const [activeTab, setActiveTab] = useState("upcoming");
   const [bookings, setBookings] = useState([]);
@@ -38,7 +42,17 @@ export function useBookingsPage() {
       const venueMap = new Map(venues.map((venue) => [venue.id, venue]));
       const eventIds = [...new Set(rawBookings.map((booking) => booking.eventId).filter(Boolean))];
 
-      const eventResults = await Promise.allSettled(eventIds.map((eventId) => getEventById(eventId)));
+      const eventResults = await Promise.allSettled(eventIds.map(async (eventId) => {
+        try {
+          return await getEventById(eventId);
+        } catch (error) {
+          if (isNotFoundError(error)) {
+            return null;
+          }
+
+          throw error;
+        }
+      }));
       const eventMap = mapEventResults(eventIds, eventResults);
 
       const mapped = rawBookings.map((booking) => {

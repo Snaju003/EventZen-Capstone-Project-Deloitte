@@ -15,10 +15,14 @@ export function buildUsersById(users) {
 }
 
 export function enrichAttendees(attendees, usersById) {
-  return attendees.map((attendee) => {
+  return attendees.map((attendee, index) => {
     const userById = usersById.get(attendee.userId);
+    const bookingId = attendee.bookingId || attendee.id || `${attendee.userId || "user"}-${index}`;
+
     return {
       ...attendee,
+      id: bookingId,
+      bookingId,
       resolvedName:
         attendee.userName || attendee.name || attendee.user?.name || userById?.name || "Unknown",
       resolvedEmail:

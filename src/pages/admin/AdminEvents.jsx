@@ -13,7 +13,6 @@ export default function AdminEvents() {
   const actions = useAdminEventMutations(page);
 
   const {
-    assignmentDrafts,
     editingId,
     eventCounts,
     events,
@@ -106,6 +105,7 @@ export default function AdminEvents() {
           submitting={submitting}
           uploadingImages={uploadingImages}
           venues={venues}
+          vendors={vendors}
           allEvents={events}
         />
 
@@ -119,21 +119,17 @@ export default function AdminEvents() {
               {events.map((event) => (
                 <AdminEventCard
                   key={event.id}
-                  assignmentDraft={assignmentDrafts[event.id]}
                   event={event}
                   isAdmin={isAdmin}
-                  onApproveVendor={actions.approveSelectedVendor}
-                  onAssignmentChange={actions.onAssignmentChange}
-                  onAssignVendor={actions.assignVendor}
                   onCancelEvent={actions.onCancelEvent}
                   onDeleteEvent={actions.onDeleteEvent}
                   onEdit={page.startEdit}
                   onOpenPublishDialog={actions.openPublishDialog}
                   onOpenRejectDialog={actions.openRejectDialog}
                   onRemoveVendor={actions.onRemoveVendor}
+                  onToggleRegistration={actions.onToggleRegistration}
                   venueMap={venueMap}
                   vendorMap={vendorMap}
-                  vendors={vendors}
                 />
               ))}
 
