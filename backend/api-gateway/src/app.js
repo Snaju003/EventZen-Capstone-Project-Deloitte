@@ -8,6 +8,7 @@ const bookingsProxy = require("./routes/bookings.proxy");
 const budgetProxy = require("./routes/budget.proxy");
 const paymentsProxy = require("./routes/payments.proxy");
 const notificationsProxy = require("./routes/notifications.proxy");
+const { swaggerUi, swaggerSpec } = require("./docs/openapi");
 const { metricsMiddleware, metricsEndpoint } = require("./monitoring/metrics");
 const { createRateLimiter } = require("./middleware/rateLimit.middleware");
 const { verifyCsrfToken } = require("./middleware/csrf.middleware");
@@ -91,6 +92,17 @@ app.use(verifyCsrfToken);
 app.get("/", (req, res) => {
   res.json({ status: "ok", message: "API Gateway is running" });
 });
+
+app.get("/api-docs.json", (req, res) => {
+  res.json(swaggerSpec);
+});
+
+app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
+  explorer: true,
+  swaggerOptions: {
+    docExpansion: "none",
+  },
+}));
 
 app.get("/metrics", metricsEndpoint);
 
