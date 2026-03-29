@@ -1,0 +1,3 @@
+{{ with secret "secret/data/eventzen/grafana" -}}
+GF_SECURITY_ADMIN_PASSWORD="{{ .Data.data.GF_SECURITY_ADMIN_PASSWORD }}"
+{{- end }}

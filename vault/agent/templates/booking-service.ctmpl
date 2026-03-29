@@ -1,0 +1,7 @@
+{{ with secret "secret/data/eventzen/booking-service" -}}
+MongoDbSettings__ConnectionString="{{ .Data.data.MongoDbSettings__ConnectionString }}"
+SmtpSettings__User="{{ .Data.data.SmtpSettings__User }}"
+SmtpSettings__Password="{{ .Data.data.SmtpSettings__Password }}"
+SmtpSettings__From="{{ .Data.data.SmtpSettings__From }}"
+INTERNAL_SERVICE_SECRET="{{ .Data.data.INTERNAL_SERVICE_SECRET }}"
+{{- end }}

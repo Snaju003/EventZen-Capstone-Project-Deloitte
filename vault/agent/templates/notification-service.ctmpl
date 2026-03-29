@@ -1,0 +1,4 @@
+{{ with secret "secret/data/eventzen/notification-service" -}}
+MONGODB_URI="{{ .Data.data.MONGODB_URI }}"
+INTERNAL_SERVICE_SECRET="{{ .Data.data.INTERNAL_SERVICE_SECRET }}"
+{{- end }}

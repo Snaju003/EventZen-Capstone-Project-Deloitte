@@ -1,0 +1,4 @@
+{{ with secret "secret/data/eventzen/api-gateway" -}}
+JWT_SECRET="{{ .Data.data.JWT_SECRET }}"
+INTERNAL_SERVICE_SECRET="{{ .Data.data.INTERNAL_SERVICE_SECRET }}"
+{{- end }}

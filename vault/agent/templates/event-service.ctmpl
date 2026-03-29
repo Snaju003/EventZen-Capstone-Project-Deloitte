@@ -1,0 +1,5 @@
+{{ with secret "secret/data/eventzen/event-service" -}}
+MONGO_URI="{{ .Data.data.MONGO_URI }}"
+GROQ_API_KEY="{{ .Data.data.GROQ_API_KEY }}"
+INTERNAL_SERVICE_SECRET="{{ .Data.data.INTERNAL_SERVICE_SECRET }}"
+{{- end }}

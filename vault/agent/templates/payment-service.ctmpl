@@ -1,0 +1,6 @@
+{{ with secret "secret/data/eventzen/payment-service" -}}
+MONGODB_URI="{{ .Data.data.MONGODB_URI }}"
+RAZORPAY_KEY_ID="{{ .Data.data.RAZORPAY_KEY_ID }}"
+RAZORPAY_KEY_SECRET="{{ .Data.data.RAZORPAY_KEY_SECRET }}"
+INTERNAL_SERVICE_SECRET="{{ .Data.data.INTERNAL_SERVICE_SECRET }}"
+{{- end }}
