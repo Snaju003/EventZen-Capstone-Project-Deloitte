@@ -426,8 +426,6 @@ EventZen follows a **microservices architecture** with an API Gateway pattern, e
 
 ## 🔄 Backend Flow Diagram
 
-> **📸 Insert the backend flow diagram below.** This should illustrate the request lifecycle from the frontend through the API Gateway, JWT validation, proxying to downstream services, database interactions, and Kafka messaging.
-
 <!-- 📌 INSERT BACKEND FLOW DIAGRAM IMAGE HERE -->
 ![Backend Flow Diagram](screenshots/backend-flow-diagram.png)
 *Request lifecycle: Client → API Gateway (JWT + CSRF + Rate Limit) → Service → MongoDB Atlas / Kafka*
@@ -1019,9 +1017,39 @@ For individual backend services, refer to each service's `.env.example` for requ
 
 ## 🐳 Docker Deployment
 
+### Compose Profiles
+
+This repository now ships with two Docker Compose files:
+
+- `docker-compose.yml` → **Development** (builds app images locally from source)
+- `docker-compose.prod.yml` → **Production** (pulls prebuilt images from Docker Hub)
+
+#### Development (local build)
+
+```bash
+# Build and start all services from local source
+docker compose -f docker-compose.yml up -d --build
+
+# With monitoring profile
+docker compose -f docker-compose.yml --profile monitoring up -d --build
+```
+
+#### Production (prebuilt images)
+
+```bash
+# Pull latest published images first
+docker compose -f docker-compose.prod.yml pull
+
+# Start services using registry images
+docker compose -f docker-compose.prod.yml up -d
+
+# With monitoring profile
+docker compose -f docker-compose.prod.yml --profile monitoring up -d
+```
+
 ### Container Overview
 
-The `docker-compose.yml` orchestrates **20+ containers**:
+The `docker-compose.yml` (development) and `docker-compose.prod.yml` (production) orchestrate **20+ containers**:
 
 | Container | Image | Purpose |
 |---|---|---|

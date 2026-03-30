@@ -207,8 +207,7 @@ services:
       - "9094:9094"
 
   auth-service:
-    build:
-      context: ./backend/auth-service
+    image: snaju/eventzen-auth-service:latest
     container_name: eventzen-auth-service
     restart: unless-stopped
     environment:
@@ -238,8 +237,7 @@ services:
         condition: service_started
 
   event-service:
-    build:
-      context: ./backend/event-service
+    image: snaju/eventzen-event-service:latest
     container_name: eventzen-event-service
     restart: unless-stopped
     environment:
@@ -265,8 +263,7 @@ services:
         condition: service_started
 
   budget-service:
-    build:
-      context: ./backend/budget-service
+    image: snaju/eventzen-budget-service:latest
     container_name: eventzen-budget-service
     entrypoint: [ "sh" ]
     command: [ "/vault/scripts/start-service-with-runtime-env.sh", "budget-service", "java", "-jar", "app.jar" ]
@@ -288,8 +285,7 @@ services:
         condition: service_started
 
   booking-service:
-    build:
-      context: ./backend/booking-service
+    image: snaju/eventzen-booking-service:latest
     container_name: eventzen-booking-service
     entrypoint: [ "sh" ]
     command: [ "/vault/scripts/start-service-with-runtime-env.sh", "booking-service", "dotnet", "BookingService.dll" ]
@@ -322,8 +318,7 @@ services:
       - "5000"
 
   payment-service:
-    build:
-      context: ./backend/payment-service
+    image: snaju/eventzen-payment-service:latest
     container_name: eventzen-payment-service
     restart: unless-stopped
     environment:
@@ -349,8 +344,7 @@ services:
       - "3002"
 
   notification-service:
-    build:
-      context: ./backend/notification-service
+    image: snaju/eventzen-notification-service:latest
     container_name: eventzen-notification-service
     restart: unless-stopped
     environment:
@@ -373,8 +367,7 @@ services:
       - "3003"
 
   api-gateway:
-    build:
-      context: ./backend/api-gateway
+    image: snaju/eventzen-api-gateway:latest
     container_name: eventzen-api-gateway
     restart: unless-stopped
     environment:
@@ -415,10 +408,7 @@ services:
       - "3000:3000"
 
   frontend:
-    build:
-      context: ./frontend
-      args:
-        VITE_BACKEND_URL: /
+    image: snaju/eventzen-frontend:latest
     container_name: eventzen-frontend
     restart: unless-stopped
     depends_on:
