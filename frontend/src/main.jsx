@@ -15,7 +15,7 @@ createRoot(document.getElementById("root")).render(
         <NotificationsProvider>
           <MotionConfig reducedMotion="user">
             <Toaster
-              position="top-right"
+              position="top-center"
               toastOptions={{
                 duration: 3500,
                 style: {
