@@ -5,18 +5,20 @@ const { fetchEventById } = require("../services/eventClient");
 const { createPaymentOrder } = require("../services/paymentOrder.service");
 const { verifyPayment } = require("../services/paymentVerification.service");
 const { getRevenueSummary } = require("../services/revenueSummary.service");
-const { getRazorpayClient } = require("../services/razorpayClient");
+const { getRazorpayClient, getRazorpayCredentials } = require("../services/razorpayClient");
 
 const router = express.Router();
 const DEFAULT_CURRENCY = process.env.PAYMENT_CURRENCY || "INR";
 
 async function createOrderHandler(req, res, next) {
   try {
+    const { keyId } = getRazorpayCredentials();
+
     const orderPayload = await createPaymentOrder({
       user: req.user,
       body: req.body,
       currency: DEFAULT_CURRENCY,
-      razorpayKeyId: process.env.RAZORPAY_KEY_ID,
+      razorpayKeyId: keyId,
       fetchEventById,
       getRazorpayClient,
     });
