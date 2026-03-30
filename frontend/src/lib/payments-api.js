@@ -1,7 +1,9 @@
 import { apiClient } from "@/lib/api-client";
 
 export async function createPaymentOrder(payload) {
-  const response = await apiClient.post("/payments/orders", payload);
+  const response = await apiClient.post("/payments/orders", payload, {
+    withCredentials: true,
+  });
   return response?.data || null;
 }
 

@@ -1,4 +1,5 @@
 let checkoutScriptPromise;
+const RAZORPAY_SESSION_COOKIE_NAME = "rzp_unified_session_id";
 
 function loadCheckoutScript() {
   if (typeof window === "undefined") {
@@ -27,6 +28,76 @@ function loadCheckoutScript() {
   return checkoutScriptPromise;
 }
 
+function readCookieValue(cookieName) {
+  if (typeof document === "undefined") {
+    return null;
+  }
+
+  const cookieString = String(document.cookie || "");
+  if (!cookieString) {
+    return null;
+  }
+
+  const prefixedName = `${cookieName}=`;
+  const matchingChunk = cookieString
+    .split(";")
+    .map((chunk) => chunk.trim())
+    .find((chunk) => chunk.startsWith(prefixedName));
+
+  if (!matchingChunk) {
+    return null;
+  }
+
+  const rawValue = matchingChunk.slice(prefixedName.length);
+  if (!rawValue) {
+    return null;
+  }
+
+  try {
+    return decodeURIComponent(rawValue);
+  } catch {
+    return rawValue;
+  }
+}
+
+function writeCookieValue(cookieName, cookieValue) {
+  if (typeof document === "undefined" || !cookieValue) {
+    return;
+  }
+
+  const isHttps = typeof window !== "undefined" && window.location.protocol === "https:";
+  const sameSitePolicy = isHttps ? "None" : "Lax";
+  const secureFlag = isHttps ? "; Secure" : "";
+
+  document.cookie = `${cookieName}=${encodeURIComponent(cookieValue)}; path=/; SameSite=${sameSitePolicy}${secureFlag}`;
+}
+
+function generateSessionId() {
+  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+    return crypto.randomUUID();
+  }
+
+  const randomPart = Math.random().toString(36).slice(2, 12);
+  return `${Date.now().toString(36)}_${randomPart}`;
+}
+
+function ensureRazorpaySessionCookie() {
+  const existingSessionId = readCookieValue(RAZORPAY_SESSION_COOKIE_NAME);
+  const sessionId = existingSessionId || generateSessionId();
+
+  writeCookieValue(RAZORPAY_SESSION_COOKIE_NAME, sessionId);
+  return sessionId;
+}
+
+export async function prepareRazorpaySession() {
+  const loaded = await loadCheckoutScript();
+  if (!loaded || typeof window === "undefined" || !window.Razorpay) {
+    throw new Error("Unable to load Razorpay checkout. Please try again.");
+  }
+
+  ensureRazorpaySessionCookie();
+}
+
 export async function openRazorpayCheckout({
   key,
   amount,
@@ -36,10 +107,7 @@ export async function openRazorpayCheckout({
   description,
   prefill,
 }) {
-  const loaded = await loadCheckoutScript();
-  if (!loaded || typeof window === "undefined" || !window.Razorpay) {
-    throw new Error("Unable to load Razorpay checkout. Please try again.");
-  }
+  await prepareRazorpaySession();
 
   return new Promise((resolve, reject) => {
     const razorpay = new window.Razorpay({

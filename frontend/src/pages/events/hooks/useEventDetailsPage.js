@@ -6,7 +6,7 @@ import { getApiErrorMessage } from "@/lib/auth-api";
 import { createBooking, getEventBookingCount } from "@/lib/bookings-api";
 import { getEventById, getVenues } from "@/lib/events-api";
 import { createPaymentOrder, verifyPayment } from "@/lib/payments-api";
-import { openRazorpayCheckout } from "@/lib/razorpay-checkout";
+import { openRazorpayCheckout, prepareRazorpaySession } from "@/lib/razorpay-checkout";
 
 const CONVENIENCE_FEE_PERCENT = 5;
 const MAX_TICKETS_PER_BOOKING = 10;
@@ -153,6 +153,8 @@ export function useEventDetailsPage(id, navigate) {
 
     setIsBooking(true);
     try {
+      await prepareRazorpaySession();
+
       const paymentOrder = await createPaymentOrder({
         eventId: id,
         seatCount: parsedSeats,
