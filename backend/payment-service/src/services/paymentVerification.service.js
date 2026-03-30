@@ -23,6 +23,17 @@ function assertPaymentSignature({ orderId, paymentId, signature, secret }) {
   }
 }
 
+function readFirstText(values) {
+  for (const value of values) {
+    const normalized = readText(value);
+    if (hasText(normalized)) {
+      return normalized;
+    }
+  }
+
+  return "";
+}
+
 async function recordConvenienceFeeRevenue({ eventId, seatCount, ticketPrice, convenienceFee }) {
   if (!isDatabaseConnected()) {
     console.warn("Database not connected. Skipping revenue tracking.");
@@ -52,9 +63,31 @@ async function verifyPayment({ user, body, razorpaySecret, getRazorpayClient }) 
     throw createHttpError(403, "Only customers can verify booking payments");
   }
 
-  const orderId = readText(body?.razorpayOrderId);
-  const paymentId = readText(body?.razorpayPaymentId);
-  const signature = readText(body?.razorpaySignature);
+  const paymentPayload = typeof body?.payment === "object" && body?.payment !== null ? body.payment : {};
+  const orderId = readFirstText([
+    body?.razorpayOrderId,
+    body?.razorpay_order_id,
+    body?.orderId,
+    paymentPayload?.razorpayOrderId,
+    paymentPayload?.razorpay_order_id,
+    paymentPayload?.orderId,
+  ]);
+  const paymentId = readFirstText([
+    body?.razorpayPaymentId,
+    body?.razorpay_payment_id,
+    body?.paymentId,
+    paymentPayload?.razorpayPaymentId,
+    paymentPayload?.razorpay_payment_id,
+    paymentPayload?.paymentId,
+  ]);
+  const signature = readFirstText([
+    body?.razorpaySignature,
+    body?.razorpay_signature,
+    body?.signature,
+    paymentPayload?.razorpaySignature,
+    paymentPayload?.razorpay_signature,
+    paymentPayload?.signature,
+  ]);
   const eventId = readText(body?.eventId);
   const seatCount = sanitizeSeatCount(body?.seatCount);
 

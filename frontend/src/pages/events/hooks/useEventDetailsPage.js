@@ -5,13 +5,15 @@ import { useAuth } from "@/hooks/useAuth";
 import { getApiErrorMessage } from "@/lib/auth-api";
 import { createBooking, getEventBookingCount } from "@/lib/bookings-api";
 import { getEventById, getVenues } from "@/lib/events-api";
+import { createPaymentOrder, verifyPayment } from "@/lib/payments-api";
+import { openRazorpayCheckout, prepareRazorpaySession } from "@/lib/razorpay-checkout";
 
 const CONVENIENCE_FEE_PERCENT = 5;
 const MAX_TICKETS_PER_BOOKING = 10;
 
 export function getCannotBookMessage(event, isAuthenticated, availableSeats) {
   if (!isAuthenticated) {
-    return "Please log in before booking.";
+    return "Please log in before booking and payment.";
   }
 
   if (event?.status !== "published") {
@@ -151,16 +153,43 @@ export function useEventDetailsPage(id, navigate) {
 
     setIsBooking(true);
     try {
+      await prepareRazorpaySession();
+
+      const paymentOrder = await createPaymentOrder({
+        eventId: id,
+        seatCount: parsedSeats,
+        ticketTypeId: selectedTicketType?.id || undefined,
+      });
+
+      const paymentResult = await openRazorpayCheckout({
+        key: paymentOrder?.keyId,
+        amount: paymentOrder?.amount,
+        currency: paymentOrder?.currency || "INR",
+        orderId: paymentOrder?.orderId,
+        name: "EventZen",
+        description: `${parsedSeats} seat${parsedSeats > 1 ? "s" : ""}${selectedTicketType ? ` (${selectedTicketType.name})` : ""} for ${event?.title || "event"}`,
+        prefill: {
+          name: user?.name || "",
+          email: user?.email || "",
+        },
+      });
+
+      await verifyPayment({
+        ...paymentResult,
+        eventId: id,
+        seatCount: parsedSeats,
+      });
+
       await createBooking({
         eventId: id,
         seatCount: parsedSeats,
         ticketTypeId: selectedTicketType?.id || undefined,
         ticketTypeName: selectedTicketType?.name || undefined,
       });
-      toast.success("Ticket booked successfully.");
+      toast.success("Payment successful and booking confirmed.");
       navigate("/my-bookings");
     } catch (bookingError) {
-      toast.error(getApiErrorMessage(bookingError, "Unable to complete booking."));
+      toast.error(getApiErrorMessage(bookingError, "Unable to complete payment and booking."));
     } finally {
       setIsBooking(false);
     }

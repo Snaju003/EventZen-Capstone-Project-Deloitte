@@ -166,7 +166,7 @@ export function EventBookingPanel({
             className="h-11 w-full rounded-lg bg-primary px-4 font-semibold text-white transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:bg-slate-300"
             whileTap={{ scale: 0.98 }}
           >
-            {isBooking ? "Booking seats..." : "Confirm seats & book"}
+            {isBooking ? "Processing payment..." : "Confirm seats & pay"}
           </motion.button>
         ) : (
           <Link

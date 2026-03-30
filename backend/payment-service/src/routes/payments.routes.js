@@ -10,7 +10,7 @@ const { getRazorpayClient } = require("../services/razorpayClient");
 const router = express.Router();
 const DEFAULT_CURRENCY = process.env.PAYMENT_CURRENCY || "INR";
 
-router.post("/payments/orders", requireGatewayIdentity, async (req, res, next) => {
+async function createOrderHandler(req, res, next) {
   try {
     const orderPayload = await createPaymentOrder({
       user: req.user,
@@ -25,7 +25,10 @@ router.post("/payments/orders", requireGatewayIdentity, async (req, res, next) =
   } catch (error) {
     return next(error);
   }
-});
+}
+
+router.post("/payments/orders", requireGatewayIdentity, createOrderHandler);
+router.post("/payments/create-order", requireGatewayIdentity, createOrderHandler);
 
 router.post("/payments/verify", requireGatewayIdentity, async (req, res, next) => {
   try {
@@ -42,13 +45,16 @@ router.post("/payments/verify", requireGatewayIdentity, async (req, res, next) =
   }
 });
 
-router.get("/payments/revenue/summary", requireGatewayIdentity, async (req, res, next) => {
+async function getRevenueSummaryHandler(req, res, next) {
   try {
     const summary = await getRevenueSummary();
     return res.status(200).json(summary);
   } catch (error) {
     return next(error);
   }
-});
+}
+
+router.get("/payments/revenue/summary", requireGatewayIdentity, getRevenueSummaryHandler);
+router.get("/payments/revenue-summary", requireGatewayIdentity, getRevenueSummaryHandler);
 
 module.exports = router;

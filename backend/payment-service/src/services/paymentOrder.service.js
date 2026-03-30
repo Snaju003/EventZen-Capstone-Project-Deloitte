@@ -32,7 +32,10 @@ async function createPaymentOrder({ user, body, currency, razorpayKeyId, fetchEv
   const ticketTypes = Array.isArray(event?.ticketTypes) ? event.ticketTypes : [];
 
   if (ticketTypeId && ticketTypes.length > 0) {
-    const matchedType = ticketTypes.find((tt) => tt.id === ticketTypeId);
+    const matchedType = ticketTypes.find((tt) => {
+      const candidateId = readText(tt?.id || tt?._id || "");
+      return candidateId === ticketTypeId;
+    });
     if (!matchedType) {
       throw createHttpError(400, "Invalid ticket type selected");
     }
