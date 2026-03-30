@@ -11,7 +11,7 @@ const MAX_TICKETS_PER_BOOKING = 10;
 
 export function getCannotBookMessage(event, isAuthenticated, availableSeats) {
   if (!isAuthenticated) {
-    return "Please log in before booking and payment.";
+    return "Please log in before booking.";
   }
 
   if (event?.status !== "published") {
