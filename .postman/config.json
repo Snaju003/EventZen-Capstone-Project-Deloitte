@@ -1,0 +1,17 @@
+{
+  "workspace": {
+    "id": "9d17c136-e60e-4de3-a029-cbb0d1eecb91"
+  },
+  "entities": {
+    "environments": [
+      "..\\tests\\postman\\CI.postman_environment.json"
+    ],
+    "flows": [],
+    "globals": [],
+    "mocks": [],
+    "specs": [],
+    "collections": [
+      "..\\tests\\postman\\EventZen.postman_collection.json"
+    ]
+  }
+}

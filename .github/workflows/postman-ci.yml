@@ -1,0 +1,61 @@
+name: Postman API Tests CI
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  test-api:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Newman
+        run: npm install -g newman
+
+      - name: Start services via Docker Compose
+        run: docker compose up -d
+        
+      - name: Wait for API Gateway to be healthy
+        run: |
+          echo "Waiting for API Gateway to boot up..."
+          # We loop and curl the swagger docs json specifically
+          # Docker compose brings up ~10 containers including Vault and Kafka, this might take a minute
+          for i in {1..40}; do
+            if curl -sSf http://localhost:3000/api-docs.json > /dev/null; then
+              echo "API Gateway is UP and running!"
+              exit 0
+            fi
+            echo "Attempt $i: Gateway not ready yet... sleeping for 5s"
+            sleep 5
+          done
+          echo "API Gateway failed to start within the timeout period."
+          docker compose logs api-gateway
+          exit 1
+
+      - name: Run Postman Collection with Newman
+        run: |
+          newman run tests/postman/EventZen.postman_collection.json \
+            -e tests/postman/CI.postman_environment.json \
+            --reporters cli,junit \
+            --reporter-junit-export newman-report.xml
+
+      - name: Upload Test Report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: postman-junit-report
+          path: newman-report.xml
+
+      - name: Teardown Docker Compose
+        if: always()
+        run: docker compose down -v
