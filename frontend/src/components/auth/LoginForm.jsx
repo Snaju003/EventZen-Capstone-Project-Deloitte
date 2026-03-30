@@ -110,7 +110,7 @@ export const LoginForm = () => {
       >
         <Button
           type="submit"
-          className="w-full bg-gradient-to-r from-primary via-blue-600 to-cyan-600 shadow-[0_4px_16px_-4px_rgba(59,130,246,0.4)] transition-all duration-300 hover:shadow-[0_6px_20px_-4px_rgba(59,130,246,0.5)]"
+          className="w-full bg-linear-to-r from-primary via-blue-600 to-cyan-600 shadow-[0_4px_16px_-4px_rgba(59,130,246,0.4)] transition-all duration-300 hover:shadow-[0_6px_20px_-4px_rgba(59,130,246,0.5)]"
           disabled={isLoading}
         >
           {isLoading ? "Logging in..." : "Log in"}

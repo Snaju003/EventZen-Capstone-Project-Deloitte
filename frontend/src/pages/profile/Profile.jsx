@@ -107,8 +107,8 @@ export default function Profile() {
 
     return (
         <div className="relative flex min-h-screen w-full flex-col overflow-hidden">
-            <div className="soft-orb left-[-5rem] top-24 h-44 w-44 bg-indigo-200/30" />
-            <div className="soft-orb right-[-4rem] top-44 h-40 w-40 bg-amber-200/25" style={{ animationDelay: '1s' }} />
+            <div className="soft-orb -left-20 top-24 h-44 w-44 bg-indigo-200/30" />
+            <div className="soft-orb -right-16 top-44 h-40 w-40 bg-amber-200/25" style={{ animationDelay: '1s' }} />
             <main className="page-shell flex flex-1 flex-col py-4">
                 {/* Compact hero row: banner + identity side by side */}
                 <motion.div
@@ -118,7 +118,7 @@ export default function Profile() {
                     className="mb-4 grid grid-cols-1 gap-3 lg:grid-cols-[1fr_auto]"
                 >
                     {/* Left: slim banner */}
-                    <div className="flex flex-col justify-center rounded-2xl border border-white/70 bg-gradient-to-r from-slate-900 via-slate-800 to-indigo-900 px-5 py-4 text-slate-100 shadow-[0_16px_48px_-24px_rgba(15,23,42,0.5)]">
+                    <div className="flex flex-col justify-center rounded-2xl border border-white/70 bg-linear-to-r from-slate-900 via-slate-800 to-indigo-900 px-5 py-4 text-slate-100 shadow-[0_16px_48px_-24px_rgba(15,23,42,0.5)]">
                         <div className="flex items-start justify-between">
                             <div>
                                 <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-400">Account Settings</p>
