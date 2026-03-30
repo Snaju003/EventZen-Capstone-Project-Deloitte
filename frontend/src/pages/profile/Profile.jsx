@@ -97,6 +97,14 @@ export default function Profile() {
         return result;
     };
 
+    const handleSignOut = async () => {
+        await logout();
+        navigate('/auth', {
+            replace: true,
+            state: { activeTab: 'login', from: '/' },
+        });
+    };
+
     return (
         <div className="relative flex min-h-screen w-full flex-col overflow-hidden">
             <div className="soft-orb left-[-5rem] top-24 h-44 w-44 bg-indigo-200/30" />
@@ -118,10 +126,8 @@ export default function Profile() {
                                 <p className="mt-1 max-w-lg text-xs text-slate-300">Manage your personal details, security, and account preferences.</p>
                             </div>
                             <button
-                                onClick={() => { 
-                                    navigate('/', { replace: true, state: null }); 
-                                    logout(); 
-                                }}
+                                type="button"
+                                onClick={handleSignOut}
                                 className="flex shrink-0 items-center gap-1.5 rounded-lg border border-white/15 bg-white/10 px-3 py-1.5 text-xs font-semibold text-slate-200 backdrop-blur transition-all hover:bg-red-500/90 hover:text-white hover:border-red-500"
                             >
                                 <LogOut className="h-3.5 w-3.5" />

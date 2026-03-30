@@ -22,6 +22,10 @@ const AuthPage = () => {
   const { isAuthenticated, user } = useAuth();
   const [tab, setTab] = useState(location.state?.activeTab || "login");
 
+  const handleBackToHome = () => {
+    navigate("/", { replace: true, state: null });
+  };
+
   useEffect(() => {
     const activeTab = location.state?.activeTab;
     const statusMessage = location.state?.statusMessage;
@@ -55,7 +59,7 @@ const AuthPage = () => {
     <div className="relative flex min-h-screen w-full flex-col items-center justify-center overflow-hidden px-4 py-10 sm:px-6 lg:px-8">
       <motion.button
         type="button"
-        onClick={() => navigate("/")}
+        onClick={handleBackToHome}
         initial={{ opacity: 0, x: -12 }}
         animate={{ opacity: 1, x: 0 }}
         transition={{ delay: 0.2, duration: 0.4, ease: "easeOut" }}
