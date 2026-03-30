@@ -1,25 +1,17 @@
 import { apiClient } from "@/lib/api-client";
 
 export async function createPaymentOrder(payload) {
-  const seatCount = Number(payload?.seatCount);
-
-  return {
-    orderId: `bypass_order_${Date.now()}`,
-    amount: 0,
-    currency: "INR",
-    seatCount: Number.isFinite(seatCount) && seatCount > 0 ? seatCount : 1,
-    eventId: payload?.eventId || null,
-    keyId: "bypass_key",
-    bypassed: true,
-  };
+  const response = await apiClient.post("/payments/orders", payload, {
+    withCredentials: true,
+  });
+  return response?.data || null;
 }
 
 export async function verifyPayment(payload) {
-  return {
-    verified: true,
-    bypassed: true,
-    paymentId: payload?.razorpayPaymentId || `bypass_payment_${Date.now()}`,
-  };
+  const response = await apiClient.post("/payments/verify", payload, {
+    withCredentials: true,
+  });
+  return response?.data || null;
 }
 
 export async function getConvenienceFeeRevenueSummary() {

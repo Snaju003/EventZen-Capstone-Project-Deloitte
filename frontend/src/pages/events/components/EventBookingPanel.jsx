@@ -133,7 +133,7 @@ export function EventBookingPanel({
 
         {paymentBreakdown && (
           <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3">
-            <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-emerald-700">Booking Summary</p>
+            <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-emerald-700">Payment Summary</p>
             <div className="space-y-1.5 text-sm text-slate-700">
               {selectedTicketType ? (
                 <p className="flex items-center justify-between gap-2 text-xs text-slate-500">
@@ -152,7 +152,7 @@ export function EventBookingPanel({
               )}
               <div className="my-1.5 border-t border-emerald-200" />
               <p className="flex items-center justify-between gap-2 font-bold text-emerald-800">
-                <span>Total</span>
+                <span>Total Amount</span>
                 <span>{formatCurrency(paymentBreakdown.totalAmount)}</span>
               </p>
             </div>
@@ -166,7 +166,7 @@ export function EventBookingPanel({
             className="h-11 w-full rounded-lg bg-primary px-4 font-semibold text-white transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:bg-slate-300"
             whileTap={{ scale: 0.98 }}
           >
-            {isBooking ? "Booking seats..." : "Confirm seats & book"}
+            {isBooking ? "Processing payment..." : "Confirm seats & pay"}
           </motion.button>
         ) : (
           <Link
@@ -174,7 +174,7 @@ export function EventBookingPanel({
             state={{ activeTab: "login", from: `/events/${eventId}` }}
             className="inline-flex h-11 w-full items-center justify-center rounded-lg bg-primary px-4 font-semibold text-white transition-colors hover:bg-primary/90"
           >
-            Log in to book
+            Log in to book and pay
           </Link>
         )}
 
