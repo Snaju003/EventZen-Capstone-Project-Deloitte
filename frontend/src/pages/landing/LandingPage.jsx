@@ -1,4 +1,4 @@
-import { LandingBottomCta } from "@/pages/landing/components/LandingBottomCta";
+ import { LandingBottomCta } from "@/pages/landing/components/LandingBottomCta";
 import {
   FeaturesSection,
   HowItWorksSection,
