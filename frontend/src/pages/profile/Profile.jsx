@@ -99,10 +99,10 @@ export default function Profile() {
 
     const handleSignOut = async () => {
         await logout();
-        navigate('/auth', {
-            replace: true,
-            state: { activeTab: 'login', from: '/' },
-        });
+        // ProtectedRoute automatically redirects to /auth when auth state clears.
+        // Do NOT add a manual navigate('/auth') here — the dual navigation corrupts
+        // React Router's history state, breaking navigate() calls on the auth page
+        // (e.g. the "Back to Home" button) until a full page reload.
     };
 
     return (
@@ -137,14 +137,14 @@ export default function Profile() {
                     </div>
 
                     {/* Right: compact identity card */}
-                        <ProfileHeroCard
-                            user={user}
-                            onAvatarChange={handleAvatarChange}
-                            isLoading={isUploading}
-                            showStat={shouldShowProfileStat}
-                            statLabel={profileStatLabel}
-                            statValue={profileStatValue}
-                        />
+                    <ProfileHeroCard
+                        user={user}
+                        onAvatarChange={handleAvatarChange}
+                        isLoading={isUploading}
+                        showStat={shouldShowProfileStat}
+                        statLabel={profileStatLabel}
+                        statValue={profileStatValue}
+                    />
                 </motion.div>
 
                 {/* Two-column form layout */}

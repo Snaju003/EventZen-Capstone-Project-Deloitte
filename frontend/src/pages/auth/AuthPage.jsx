@@ -46,13 +46,15 @@ const AuthPage = () => {
 
   if (isAuthenticated) {
     const roleHomePath = getRoleHomePath(user?.role);
-    
-    let redirectPath = location.state?.from;
-    if (!redirectPath || redirectPath === "/" || redirectPath === "/profile") {
-      redirectPath = roleHomePath;
-    }
-    
-    return <Navigate to={redirectPath} replace />;
+    const fromPath = typeof location.state?.from === "string" ? location.state.from : "";
+    const shouldUseRoleHome = !fromPath
+      || fromPath === "/"
+      || fromPath === "/auth"
+      || fromPath.startsWith("/auth?")
+      || fromPath.startsWith("/auth#")
+      || fromPath === "/profile";
+
+    return <Navigate to={shouldUseRoleHome ? roleHomePath : fromPath} replace state={null} />;
   }
 
   return (

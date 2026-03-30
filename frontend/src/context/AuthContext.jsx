@@ -1,4 +1,4 @@
-import { createContext, useCallback, useEffect, useState } from "react";
+import { createContext, useCallback, useEffect, useRef, useState } from "react";
 
 import {
   authApi,
@@ -26,6 +26,11 @@ export function AuthProvider({ children }) {
   const [isInitializing, setIsInitializing] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
   const [pendingResetToken, setPendingResetToken] = useState(() => readStorage(RESET_TOKEN_KEY));
+  const authStateVersionRef = useRef(0);
+
+  const bumpAuthStateVersion = useCallback(() => {
+    authStateVersionRef.current += 1;
+  }, []);
 
   const setPendingVerification = useCallback((value) => {
     const nextValue = value?.email ? value : defaultPendingVerification;
@@ -38,24 +43,31 @@ export function AuthProvider({ children }) {
   }, []);
 
   const clearAuthState = useCallback(() => {
+    bumpAuthStateVersion();
     setUser(null);
-  }, []);
+  }, [bumpAuthStateVersion]);
 
   const fetchMe = useCallback(async () => {
+    const requestVersion = authStateVersionRef.current;
     const response = await authApi.get("/me");
     const payload = extractPayload(response);
     const nextUser = extractUser(payload) || payload;
 
-    setUser(nextUser);
+    if (requestVersion === authStateVersionRef.current) {
+      setUser(nextUser);
+    }
     return nextUser;
   }, []);
 
   const refreshAuthToken = useCallback(async () => {
+    const requestVersion = authStateVersionRef.current;
     const response = await authApi.post("/refresh-token", {});
     const payload = extractPayload(response);
     const nextUser = extractUser(payload) || (await fetchMe());
 
-    setUser(nextUser);
+    if (requestVersion === authStateVersionRef.current) {
+      setUser(nextUser);
+    }
     return payload;
   }, [fetchMe]);
 

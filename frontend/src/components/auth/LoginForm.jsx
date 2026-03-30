@@ -2,14 +2,13 @@ import { useState } from "react";
 import { ArrowRight } from "lucide-react";
 import { motion } from "framer-motion";
 import { z } from "zod";
-import { Link, useNavigate, useLocation } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { InputField } from "@/components/ui/InputField";
 import { MailIcon, LockIcon } from "@/components/ui/Icons";
 import { useAuth } from "@/hooks/useAuth";
 import { getApiErrorMessage } from "@/lib/auth-api";
 import { getFieldErrors, loginSchema } from "@/lib/auth-schemas";
-import { getRoleHomePath } from "@/lib/role-home";
 import toast from "react-hot-toast";
 
 const fieldAnimation = {
@@ -19,8 +18,6 @@ const fieldAnimation = {
 
 export const LoginForm = () => {
   const { isLoading, login } = useAuth();
-  const navigate = useNavigate();
-  const location = useLocation();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -41,17 +38,9 @@ export const LoginForm = () => {
     try {
       const result = await login(parsedValues.data);
       const welcomeName = result?.user?.name ? `, ${result.user.name}` : '';
-      const roleHomePath = getRoleHomePath(result?.user?.role);
-      let redirectPath = location.state?.from;
-      
-      if (!redirectPath || redirectPath === "/" || redirectPath === "/profile") {
-        redirectPath = roleHomePath;
-      }
-
-      navigate(redirectPath, {
-        replace: true,
-        state: { statusMessage: result?.message || `Welcome back${welcomeName}!` },
-      });
+      toast.success(result?.message || `Welcome back${welcomeName}!`, { id: "login-success" });
+      // Navigation is handled by AuthPage's isAuthenticated guard — no
+      // imperative navigate() here to avoid racing the auth state update.
     } catch (error) {
       if (error instanceof z.ZodError) {
         setErrors(getFieldErrors(error));

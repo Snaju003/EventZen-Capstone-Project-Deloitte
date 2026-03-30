@@ -9,7 +9,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { LogoIcon } from "@/components/ui/Icons";
 import { getApiErrorMessage } from "@/lib/auth-api";
 import { getFieldErrors, verifyOtpSchema } from "@/lib/auth-schemas";
-import { getRoleHomePath } from "@/lib/role-home";
+
 import { OtpDigitFields } from "./components/OtpDigitFields";
 
 const VerifyOtpPage = () => {
@@ -30,16 +30,7 @@ const VerifyOtpPage = () => {
 
   const isComplete = otp.every((digit) => digit !== "");
 
-  const getPostLoginPath = (nextUser) => {
-    const roleHomePath = getRoleHomePath(nextUser?.role);
 
-    let path = location.state?.from;
-    if (!path || path === "/" || path === "/profile") {
-      path = roleHomePath;
-    }
-
-    return path;
-  };
 
   useEffect(() => {
     const statusMessage = location.state?.statusMessage;
@@ -123,26 +114,19 @@ const VerifyOtpPage = () => {
       }
 
       const result = await verifyOtp(parsedValues.data);
-      const postLoginPath = getPostLoginPath(result?.user);
 
-      // Registration OTP success should land on the role-appropriate home.
-      if (currentPurpose === "register") {
-        navigate(postLoginPath, {
-          state: {
-            statusMessage: "Login successful. Welcome!",
-          },
-          replace: true,
-        });
-        return;
-      }
-
-      if (result.isLoggedIn) {
-        navigate(postLoginPath, {
-          state: {
-            statusMessage: result.message || "Login successful. Welcome!",
-          },
-          replace: true,
-        });
+      // If the user is now logged in, show a toast and navigate to /auth.
+      // AuthPage's isAuthenticated guard will redirect to the correct
+      // role-based home once the state update commits — this avoids a race
+      // condition where ProtectedRoute sees stale auth state.
+      if (currentPurpose === "register" || result.isLoggedIn) {
+        toast.success(
+          currentPurpose === "register"
+            ? "Account verified. Welcome!"
+            : (result.message || "Login successful. Welcome!"),
+          { id: "verify-success" },
+        );
+        navigate("/auth", { replace: true });
       } else {
         navigate("/auth", {
           state: {

@@ -44,11 +44,11 @@ function App() {
     <div className="app-shell flex min-h-screen flex-col">
       {!isChromeless && <Navbar />}
       <Suspense fallback={<RouteLoadingFallback message="Loading page..." />}>
-        <AnimatePresence mode="wait">
+        <AnimatePresence mode="wait" initial={false}>
           <motion.div
             key={`${location.pathname}${location.search}`}
             className={`flex-1 ${isChromeless || isLandingRoute ? "" : "pt-24 sm:pt-28"}`}
-            initial={pageTransition.initial}
+            initial={false}
             animate={pageTransition.animate}
             exit={pageTransition.exit}
             transition={pageTransition.transition}
