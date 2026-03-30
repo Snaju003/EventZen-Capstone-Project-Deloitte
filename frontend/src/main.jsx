@@ -16,6 +16,7 @@ createRoot(document.getElementById("root")).render(
           <MotionConfig reducedMotion="user">
             <Toaster
               position="top-center"
+              containerStyle={{ top: 84 }}
               toastOptions={{
                 duration: 3500,
                 style: {
