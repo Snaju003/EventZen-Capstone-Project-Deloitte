@@ -47,6 +47,11 @@
 - [Contributing](#-contributing)
 
 ---
+## 🎥 Project Demo
+  
+A complete walkthrough and live demonstration of the project is available here:
+
+👉 [Project demo](https://drive.google.com/file/d/1rDNec_FGbi6mPk172mWIv7enF1M7d1nM/view?usp=sharing)
 
 ## 🌟 Project Overview
 
