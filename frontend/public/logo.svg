@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="100%" height="100%">
+  <defs>
+    <linearGradient id="eventzen-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#2563eb" />
+      <stop offset="50%" stop-color="#0284c7" />
+      <stop offset="100%" stop-color="#0891b2" />
+    </linearGradient>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="12" stdDeviation="16" flood-color="#0284c7" flood-opacity="0.4"/>
+    </filter>
+  </defs>
+  
+  <!-- Smooth rounded square background -->
+  <rect width="460" height="460" x="26" y="26" rx="110" fill="url(#eventzen-grad)" filter="url(#shadow)" />
+  
+  <!-- Outer glowing rings indicating connection / zen ripples -->
+  <circle cx="256" cy="256" r="140" fill="none" stroke="#ffffff" stroke-width="6" opacity="0.2" />
+  <circle cx="256" cy="256" r="100" fill="none" stroke="#ffffff" stroke-width="4" opacity="0.4" />
+
+  <!-- Center Zen Lotus / Spark shape -->
+  <path d="M 256 120 C 275 190 322 237 392 256 C 322 275 275 322 256 392 C 237 322 190 275 120 256 C 190 237 237 190 256 120 Z" fill="#ffffff" opacity="0.95" />
+  
+  <!-- Core sphere -->
+  <circle cx="256" cy="256" r="32" fill="#bae6fd" />
+</svg>

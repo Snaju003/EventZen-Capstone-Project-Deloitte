@@ -2,7 +2,6 @@ import { Suspense, lazy } from "react";
 import { CalendarOff } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
 
-import { Footer } from "@/components/layout/Footer";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { SkeletonCardGrid } from "@/components/ui/SkeletonCard";
 import { staggerContainer } from "@/lib/animations";
@@ -115,8 +114,6 @@ export default function Bookings() {
           />
         )}
       </main>
-
-      <Footer />
 
       <Suspense fallback={null}>
         <BookingTicketDialog

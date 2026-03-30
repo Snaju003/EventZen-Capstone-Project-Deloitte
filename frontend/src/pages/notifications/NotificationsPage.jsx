@@ -19,7 +19,6 @@ import {
   UserCheck,
 } from "lucide-react";
 
-import { Footer } from "@/components/layout/Footer";
 import { SkeletonCardGrid } from "@/components/ui/SkeletonCard";
 import { useNotifications } from "@/hooks/useNotifications";
 import { staggerContainer, cardEnter } from "@/lib/animations";
@@ -450,8 +449,6 @@ export default function NotificationsPage() {
           <EmptyState filter={filter} />
         )}
       </main>
-
-      <Footer />
     </div>
   );
 }

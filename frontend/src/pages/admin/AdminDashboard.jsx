@@ -3,7 +3,6 @@ import { useSearchParams } from "react-router-dom";
 import { motion } from "framer-motion";
 import { RefreshCw } from "lucide-react";
 
-import { Footer } from "@/components/layout/Footer";
 import { SkeletonCardGrid } from "@/components/ui/SkeletonCard";
 import { useAuth } from "@/hooks/useAuth";
 import { BookingsTableSection } from "@/pages/admin/components/dashboard/BookingsTableSection";
@@ -131,8 +130,6 @@ export default function AdminDashboard() {
         <VenuesGridSection venues={venues} isActive={activeSection === "venues"} isLoading={isLoading} />
         <VendorsTableSection vendors={vendors} isActive={activeSection === "vendors"} isLoading={isLoading} />
       </main>
-
-      <Footer />
     </div>
   );
 }

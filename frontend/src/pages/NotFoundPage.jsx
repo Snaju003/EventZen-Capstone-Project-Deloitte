@@ -2,7 +2,6 @@ import { motion } from "framer-motion";
 import { ArrowLeft, Ghost } from "lucide-react";
 import { Link } from "react-router-dom";
 
-import { Footer } from "@/components/layout/Footer";
 import { fadeUp, staggerContainer } from "@/lib/animations";
 
 export default function NotFoundPage() {
@@ -70,8 +69,6 @@ export default function NotFoundPage() {
           </motion.div>
         </motion.div>
       </main>
-
-      <Footer />
     </div>
   );
 }

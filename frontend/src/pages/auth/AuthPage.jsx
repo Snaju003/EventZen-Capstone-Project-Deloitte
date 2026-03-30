@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { LogIn, UserPlus } from "lucide-react";
+import { ArrowLeft, LogIn, UserPlus } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
 import { Navigate, useLocation, useNavigate } from "react-router-dom";
 import { LoginForm } from "@/components/auth/LoginForm";
@@ -52,7 +52,22 @@ const AuthPage = () => {
   }
 
   return (
-    <div className="relative min-h-screen w-full overflow-hidden px-4 py-10 sm:px-6 lg:px-8">
+    <div className="relative flex min-h-screen w-full flex-col items-center justify-center overflow-hidden px-4 py-10 sm:px-6 lg:px-8">
+      <motion.button
+        type="button"
+        onClick={() => navigate("/")}
+        initial={{ opacity: 0, x: -12 }}
+        animate={{ opacity: 1, x: 0 }}
+        transition={{ delay: 0.2, duration: 0.4, ease: "easeOut" }}
+        whileHover={{ x: -3 }}
+        whileTap={{ scale: 0.96 }}
+        className="group absolute left-4 top-4 z-50 flex items-center gap-2.5 rounded-full border border-white/60 bg-white/70 px-4 py-2 text-sm font-semibold text-slate-600 shadow-[0_4px_20px_-6px_rgba(33,66,118,0.18)] backdrop-blur-md transition-all duration-300 hover:border-primary/30 hover:bg-gradient-to-r hover:from-primary/10 hover:to-blue-50 hover:text-primary hover:shadow-[0_6px_24px_-6px_rgba(59,130,246,0.25)] sm:left-6 sm:top-6"
+      >
+        <span className="flex size-6 items-center justify-center rounded-full bg-slate-100 transition-all duration-300 group-hover:bg-primary/15 group-hover:text-primary">
+          <ArrowLeft className="size-3.5 transition-transform duration-300 group-hover:-translate-x-0.5" />
+        </span>
+        Back to Home
+      </motion.button>
       <motion.div
         className="pointer-events-none absolute left-[-6rem] top-8 h-60 w-60 rounded-full bg-sky-300/25 blur-3xl"
         animate={{ x: [0, 10, 0], y: [0, -8, 0] }}

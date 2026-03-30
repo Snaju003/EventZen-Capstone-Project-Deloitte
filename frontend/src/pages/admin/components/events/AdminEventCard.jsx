@@ -80,13 +80,13 @@ export function AdminEventCard({
   const isRegistrationOpen = Boolean(event.registrationOpen);
 
   return (
-    <article className="rounded-xl border border-slate-200 bg-white p-4">
-      <ImageCarousel images={event.imageUrls} altPrefix={event.title || "Event"} className="mb-4 h-44" />
+    <article className="flex flex-col rounded-xl border border-slate-200 bg-white p-3">
+      <ImageCarousel images={event.imageUrls} altPrefix={event.title || "Event"} className="mb-3 h-40" />
 
       <div className="flex flex-col gap-3">
         <div>
           <div className="flex items-center justify-between gap-2">
-            <h3 className="text-lg font-bold text-slate-900">{event.title || "Untitled event"}</h3>
+            <h3 className="min-w-0 text-base font-bold leading-snug text-slate-900 line-clamp-2">{event.title || "Untitled event"}</h3>
             <div className="flex items-center gap-2">
               <span className={`inline-flex rounded-full border px-2 py-0.5 text-[11px] font-semibold ${statusBadgeClass}`}>
                 {statusBadgeLabel}
@@ -222,7 +222,7 @@ export function AdminEventCard({
       </div>
 
       {normalizedStatus === "published" ? (
-        <div className="mt-3 flex items-center justify-between rounded-lg border border-slate-100 bg-slate-50/60 px-3 py-2">
+        <div className="mt-3 flex items-center justify-between gap-2 rounded-lg border border-slate-100 bg-slate-50/60 px-3 py-2">
           <div className="flex flex-col">
             <span className="text-xs font-semibold text-slate-700">Registration</span>
             <span className={`text-[11px] font-medium ${isRegistrationOpen ? "text-emerald-600" : "text-slate-400"}`}>
@@ -245,9 +245,9 @@ export function AdminEventCard({
       ) : null}
 
       {isAdmin && event.vendors?.length ? (
-        <div className="mt-3 flex flex-wrap gap-2">
+        <div className="mt-3 flex flex-wrap gap-1.5">
           {event.vendors.map((assigned) => (
-            <span key={assigned.vendorId} className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs">
+            <span key={assigned.vendorId} className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-slate-50 px-2.5 py-0.5 text-[11px]">
               {vendorMap.get(assigned.vendorId)?.name || assigned.vendorId} ({formatINR(assigned.agreedCost)})
               {assigned.vendorId === event.approvedVendorId ? (
                 <span className="rounded-full border border-emerald-200 bg-emerald-50 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-700">

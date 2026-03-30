@@ -7,7 +7,6 @@ import { VenueDescriptionDialog } from "@/components/common/VenueDescriptionDial
 import { ImageCarousel } from "@/components/ui/ImageCarousel";
 import { SkeletonCardGrid } from "@/components/ui/SkeletonCard";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { Footer } from "@/components/layout/Footer";
 import { getApiErrorMessage } from "@/lib/auth-api";
 import { getVenues } from "@/lib/events-api";
 import { staggerContainer, cardEnter } from "@/lib/animations";
@@ -163,7 +162,6 @@ export default function Venues() {
                 capacity={activeVenueDescription?.capacity}
                 description={activeVenueDescription?.description}
             />
-            <Footer />
         </div>
     );
 }

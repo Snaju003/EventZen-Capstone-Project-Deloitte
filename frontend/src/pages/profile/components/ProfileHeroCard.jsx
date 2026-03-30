@@ -1,6 +1,7 @@
 import { useRef } from 'react';
 import { Camera, Pencil } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { UserAvatar } from '@/components/ui/UserAvatar';
 
 export function ProfileHeroCard({ user, onAvatarChange, isLoading, statLabel, statValue, showStat }) {
     const fileInputRef = useRef(null);
@@ -25,10 +26,7 @@ export function ProfileHeroCard({ user, onAvatarChange, isLoading, statLabel, st
             {/* Avatar */}
             <div className="flex flex-col items-center gap-1 shrink-0">
                 <div className="relative">
-                    <div
-                        className="h-16 w-16 rounded-full border-2 border-white bg-slate-100 bg-cover bg-center bg-no-repeat shadow-md ring-2 ring-primary/10"
-                        style={user?.avatar ? { backgroundImage: `url("${user.avatar}")` } : {}}
-                    />
+                    <UserAvatar name={user?.name} avatar={user?.avatar} size="lg" className="border-2 border-white shadow-md ring-2 ring-primary/10" />
                     <motion.button
                         onClick={triggerFilePicker}
                         disabled={isLoading}

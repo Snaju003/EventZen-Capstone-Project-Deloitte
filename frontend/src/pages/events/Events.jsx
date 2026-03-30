@@ -3,7 +3,6 @@ import { motion } from "framer-motion";
 
 import { EmptyState } from "@/components/ui/EmptyState";
 import { SkeletonCardGrid } from "@/components/ui/SkeletonCard";
-import { Footer } from "@/components/layout/Footer";
 import { staggerContainer } from "@/lib/animations";
 import { EventsFiltersPanel } from "@/pages/events/components/EventsFiltersPanel";
 import { EventsPaginationBar } from "@/pages/events/components/EventsPaginationBar";
@@ -67,7 +66,7 @@ export default function Events() {
         ) : null}
 
         {isLoading ? (
-          <SkeletonCardGrid count={4} columns="md:grid-cols-2" />
+          <SkeletonCardGrid count={8} columns="md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4" />
         ) : events.length === 0 ? (
           <EmptyState
             icon={Search}
@@ -77,7 +76,7 @@ export default function Events() {
         ) : (
           <>
             <motion.div
-              className="grid grid-cols-1 gap-4 md:grid-cols-2"
+              className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
               variants={staggerContainer(0.06, 0)}
               initial="hidden"
               animate="show"
@@ -100,8 +99,6 @@ export default function Events() {
           </>
         )}
       </main>
-
-      <Footer />
     </div>
   );
 }

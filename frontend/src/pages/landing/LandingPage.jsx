@@ -1,4 +1,3 @@
-import { Footer } from "@/components/layout/Footer";
 import { LandingBottomCta } from "@/pages/landing/components/LandingBottomCta";
 import {
   FeaturesSection,
@@ -19,7 +18,6 @@ export default function LandingPage() {
       <FeaturesSection />
       <TestimonialsSection />
       <LandingBottomCta />
-      <Footer />
     </div>
   );
 }

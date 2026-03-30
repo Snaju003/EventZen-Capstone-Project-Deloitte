@@ -7,7 +7,7 @@ import toast from 'react-hot-toast';
 import { ProfileHeroCard } from './components/ProfileHeroCard';
 import { PersonalInfoForm } from './components/PersonalInfoForm';
 import { ChangePasswordForm } from './components/ChangePasswordForm';
-import { Footer } from '@/components/layout/Footer';
+import { BecomeVendorCard } from './components/BecomeVendorCard';
 import { authApi, getMessage } from '@/lib/auth-api';
 import { getMyBookings } from '@/lib/bookings-api';
 import { getEvents } from '@/lib/events-api';
@@ -164,9 +164,15 @@ export default function Profile() {
                             onSubmit={handleChangePassword}
                         />
                     </motion.div>
+
+                    {/* Become a Vendor card — only visible for customers */}
+                    {normalizedUserRole === 'customer' ? (
+                        <motion.div variants={fadeUp} className="flex lg:col-span-2">
+                            <BecomeVendorCard user={user} onStatusChange={loadProfile} />
+                        </motion.div>
+                    ) : null}
                 </motion.div>
             </main>
-            <Footer />
         </div>
     );
 }

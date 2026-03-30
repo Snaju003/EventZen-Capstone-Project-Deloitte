@@ -67,13 +67,12 @@ public class EventServiceClient
         }
 
         var method = request.Method.Method.ToUpperInvariant();
-        var path = request.RequestUri?.PathAndQuery;
-        if (string.IsNullOrWhiteSpace(path))
-        {
-            path = "/";
-        }
+        var originalPath = request.RequestUri?.OriginalString ?? "/";
+        var nonce = Guid.NewGuid().ToString();
+        var signedPath = originalPath.Contains('?') ? $"{originalPath}&nonce={nonce}" : $"{originalPath}?nonce={nonce}";
+        request.RequestUri = new Uri(signedPath, UriKind.RelativeOrAbsolute);
 
-        var payload = $"{timestamp}.{method}.{path}.{service}";
+        var payload = $"{timestamp}.{method}.{signedPath}.{service}";
         using var hmac = new HMACSHA256(Encoding.UTF8.GetBytes(secret));
         var signatureBytes = hmac.ComputeHash(Encoding.UTF8.GetBytes(payload));
         var signature = Convert.ToHexString(signatureBytes).ToLowerInvariant();

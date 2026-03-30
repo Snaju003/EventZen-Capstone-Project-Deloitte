@@ -7,7 +7,6 @@ import toast from "react-hot-toast";
 
 import { checkInBooking } from "@/lib/bookings-api";
 import { getApiErrorMessage } from "@/lib/auth-api";
-import { Footer } from "@/components/layout/Footer";
 
 const SCAN_STATUS = {
   IDLE: "idle",
@@ -373,8 +372,6 @@ export default function VendorCheckIn() {
           </ul>
         </motion.div>
       </main>
-
-      <Footer />
     </div>
   );
 }

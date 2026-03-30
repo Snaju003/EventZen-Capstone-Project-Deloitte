@@ -54,14 +54,19 @@ public class EventAccessClient {
         String endpoint = normalizedBaseUrl + "/events/internal/v1/events/" + encodedEventId + "/access";
 
         URI uri = URI.create(endpoint);
+        String nonceParam = "nonce=" + java.util.UUID.randomUUID().toString();
         String method = "GET";
         String path = uri.getRawPath();
         if (uri.getRawQuery() != null && !uri.getRawQuery().isBlank()) {
-            path = path + "?" + uri.getRawQuery();
+            path = path + "?" + uri.getRawQuery() + "&" + nonceParam;
+        } else {
+            path = path + "?" + nonceParam;
         }
 
+        URI newUri = URI.create(endpoint + (endpoint.contains("?") ? "&" : "?") + nonceParam);
+
         HttpRequest.Builder requestBuilder = HttpRequest.newBuilder()
-                .uri(uri)
+                .uri(newUri)
                 .timeout(Duration.ofSeconds(8))
                 .GET();
 

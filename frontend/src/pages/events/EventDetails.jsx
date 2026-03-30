@@ -3,7 +3,6 @@ import { ArrowLeft } from "lucide-react";
 import { motion } from "framer-motion";
 
 import { EmptyState } from "@/components/ui/EmptyState";
-import { Footer } from "@/components/layout/Footer";
 import { staggerContainer } from "@/lib/animations";
 import { EventBookingPanel } from "@/pages/events/components/EventBookingPanel";
 import { EventDetailsSkeleton } from "@/pages/events/components/EventDetailsSkeleton";
@@ -103,8 +102,6 @@ export default function EventDetails() {
           />
         )}
       </main>
-
-      <Footer />
     </div>
   );
 }

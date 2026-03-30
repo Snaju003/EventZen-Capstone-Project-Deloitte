@@ -1,7 +1,6 @@
 import { Suspense, lazy } from "react";
 import { motion } from "framer-motion";
 
-import { Footer } from "@/components/layout/Footer";
 import { AdminEventCard } from "@/pages/admin/components/events/AdminEventCard";
 import { AdminEventsToolbar } from "@/pages/admin/components/events/AdminEventsToolbar";
 import { ApprovalQueue } from "@/pages/admin/components/events/ApprovalQueue";
@@ -122,7 +121,7 @@ export default function AdminEvents() {
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.35, delay: 0.12, ease: "easeOut" }}
-              className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3"
+              className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
             >
               {events.map((event) => (
                 <AdminEventCard
@@ -142,7 +141,7 @@ export default function AdminEvents() {
               ))}
 
               {events.length === 0 ? (
-                <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50/50 p-8 text-center text-slate-500 md:col-span-2 lg:col-span-3">
+                <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50/50 p-8 text-center text-slate-500 md:col-span-2 lg:col-span-3 xl:col-span-4">
                   No events found for this filter.
                 </div>
               ) : null}
@@ -209,8 +208,6 @@ export default function AdminEvents() {
           />
         </Suspense>
       </main>
-
-      <Footer />
     </div>
   );
 }

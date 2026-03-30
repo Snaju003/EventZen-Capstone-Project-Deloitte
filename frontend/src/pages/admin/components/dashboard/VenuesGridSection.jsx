@@ -12,7 +12,7 @@ export function VenuesGridSection({ isActive, isLoading, venues }) {
     <div className={isActive ? undefined : "hidden"}>
       {!isLoading ? (
         <motion.div
-          className="grid grid-cols-1 gap-4 md:grid-cols-2"
+          className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
           variants={staggerContainer(0.06, 0)}
           initial="hidden"
           animate="show"
@@ -41,7 +41,7 @@ export function VenuesGridSection({ isActive, isLoading, venues }) {
             </motion.article>
           ))}
           {venues.length === 0 ? (
-            <div className="surface-card p-6 text-center text-slate-600 md:col-span-2">No venues found.</div>
+            <div className="surface-card p-6 text-center text-slate-600 md:col-span-2 lg:col-span-3 xl:col-span-4">No venues found.</div>
           ) : null}
         </motion.div>
       ) : null}

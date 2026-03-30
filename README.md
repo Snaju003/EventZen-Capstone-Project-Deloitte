@@ -66,15 +66,8 @@ EventZen follows a **microservices architecture** with an API Gateway pattern, e
 
 ### High-Level Architecture Diagram
 
-<!-- 📌 INSERT BACKEND FLOW / ARCHITECTURE DIAGRAM HERE -->
-<!-- Replace the placeholder below with an actual architecture diagram image -->
-<!-- Recommended: Use draw.io, Excalidraw, or Mermaid to create the diagram -->
-
-> **📸 Backend Architecture Flow Diagram**
->
-> ![Backend Architecture Diagram](screenshots/architecture-diagram.png)
->
-> *Add your architecture diagram image at `screenshots/architecture-diagram.png`*
+![Backend Architecture Diagram](screenshots/architecture-diagram.png)
+*EventZen microservices architecture — Frontend → API Gateway → 6 polyglot services → MongoDB / Kafka / Vault*
 
 ```
 ┌──────────────────────────────────────────────────────────────────┐
@@ -84,11 +77,11 @@ EventZen follows a **microservices architecture** with an API Gateway pattern, e
 └────────────────────────────┬─────────────────────────────────────┘
                              │  HTTP / REST
                              ▼
-┌──────────────────────────────────────────────────────────────────┐
-│                      API GATEWAY (Node.js)                       │
+┌───────────────────────────────────────────────────────────────────┐
+│                      API GATEWAY (Node.js)                        │
 │  Express + http-proxy-middleware │ JWT Auth │ CSRF │ Rate Limit   │
 │  Load Balancer │ Response Cache │ Swagger UI │ Prometheus Metrics │
-└────┬────────┬────────┬────────┬────────┬────────┬───────────────┘
+└────┬────────┬────────┬────────┬────────┬────────┬─────────────────┘
      │        │        │        │        │        │
      ▼        ▼        ▼        ▼        ▼        ▼
 ┌────────┐┌────────┐┌────────┐┌────────┐┌────────┐┌───────────────┐
@@ -105,8 +98,8 @@ EventZen follows a **microservices architecture** with an API Gateway pattern, e
                          └───────┘                    └───────┘
                                                           │
 ┌─────────────────────────────────────────────────────────┘
-│                    HashiCorp Vault
-│     AppRole Auth │ KV v2 Secrets │ Vault Agent Sidecars
+│                    HashiCorp Vault                      │
+│     AppRole Auth │ KV v2 Secrets │ Vault Agent Sidecars │
 └─────────────────────────────────────────────────────────┘
 ```
 
@@ -403,20 +396,6 @@ EventZen follows a **microservices architecture** with an API Gateway pattern, e
 
 ---
 
-### Admin Vendors Management
-<!-- 📌 INSERT ADMIN VENDORS SCREENSHOT -->
-![Admin Vendors Management](screenshots/admin-vendors.png)
-*Admin vendors table with vendor role approval workflow*
-
----
-
-### Admin Attendees View
-<!-- 📌 INSERT ADMIN ATTENDEES SCREENSHOT -->
-![Admin Attendees](screenshots/admin-attendees.png)
-*Per-event attendee list showing booking details and check-in status*
-
----
-
 ### Admin Budget Management
 <!-- 📌 INSERT ADMIN BUDGET SCREENSHOT -->
 ![Admin Budget](screenshots/admin-budget.png)
@@ -626,6 +605,7 @@ http://localhost:3000/api-docs
   - SMTP credentials
   - Cloudinary API keys
   - Groq AI API key
+  - Internal service-to-service HMAC secret
   - Grafana admin password
 
 ### 2. JWT Authentication
@@ -650,6 +630,13 @@ http://localhost:3000/api-docs
 - **OTP Hashing** — SHA-256 hashed OTPs stored in database
 - **No Plaintext Storage** — All sensitive data encrypted at rest
 
+### 6. Internal Service Authentication (HMAC)
+- **Shared Secret** — All services share an `INTERNAL_SERVICE_SECRET` (stored in Vault) for mutual authentication
+- **HMAC Signatures** — Service-to-service calls include an HMAC-SHA256 signature header computed from the caller name, timestamp, and shared secret
+- **Replay Protection** — Signatures expire after a configurable TTL (`INTERNAL_SIGNATURE_TTL_MS`, default: 60s)
+- **Caller Identity** — Each service identifies itself via `INTERNAL_CALLER_NAME` (e.g., `api-gateway`, `auth-service`)
+- **Cross-Language Support** — HMAC verification implemented in Node.js, Java (Spring Boot), and C# (.NET) for polyglot compatibility
+
 ---
 
 ## 📡 Event-Driven Architecture (Kafka)
@@ -667,27 +654,27 @@ Auto Topic Creation: Enabled
 
 ### Event Flow
 ```
-┌─────────────────┐    event.published     ┌──────────────────────┐
-│  Event Service   │──────────────────────►│                      │
-│  (Spring Kafka)  │    event.rejected      │                      │
-│                  │──────────────────────►│                      │
-│                  │    event.cancelled     │                      │
-│                  │──────────────────────►│   Notification       │
-│                  │    event.vendor_*      │   Service            │
-│                  │──────────────────────►│   (KafkaJS Consumer) │
-├─────────────────┤                        │                      │
-│ Booking Service  │    booking.confirmed   │   ┌────────────────┐│
-│  (Confluent.Kafka│──────────────────────►│   │ Maps events to ││
-│   for .NET)      │    booking.cancelled   │   │ notifications  ││
-│                  │──────────────────────►│   └────────────────┘│
-├─────────────────┤                        │                      │
-│ Payment Service  │    payment.completed   │   ┌────────────────┐│
-│  (KafkaJS)       │──────────────────────►│   │ Persists to    ││
-│                  │                        │   │ MongoDB        ││
-├─────────────────┤                        │   └────────────────┘│
-│  Auth Service    │    auth.vendor_role_*  │                      │
-│  (KafkaJS)       │──────────────────────►│                      │
-└─────────────────┘                        └──────────────────────┘
+┌──────────────────┐    event.published     ┌────────────────────────┐
+│  Event Service   │───────────────────────►│                        │
+│  (Spring Kafka)  │    event.rejected      │                        │
+│                  │───────────────────────►│                        │
+│                  │    event.cancelled     │                        │
+│                  │───────────────────────►│   Notification         │
+│                  │    event.vendor_*      │   Service              │
+│                  │───────────────────────►│   (KafkaJS Consumer)   │
+├──────────────────┤                        │                        │
+│ Booking Service  │    booking.confirmed   │   ┌────────────────┐   │
+│  (Confluent.Kafka│───────────────────────►│   │ Maps events to │   │
+│   for .NET)      │    booking.cancelled   │   │ notifications  │   │ 
+│                  │───────────────────────►│   └────────────────┘   │
+├──────────────────┤                        │                        │
+│ Payment Service  │    payment.completed   │   ┌────────────────┐   │
+│  (KafkaJS)       │───────────────────────►│   │ Persists to    │   │
+│                  │                        │   │ MongoDB        │   │
+├──────────────────┤                        │   └────────────────┘   │
+│  Auth Service    │    auth.vendor_role_*  │                        │
+│  (KafkaJS)       │───────────────────────►│                        │
+└──────────────────┘                        └────────────────────────┘
 ```
 
 ---
@@ -1025,6 +1012,8 @@ For individual backend services, refer to each service's `.env.example` for requ
 | `AUTH_RATE_LIMIT_WINDOW_MS` | Auth rate limit window | `900000` (15 min) |
 | `AUTH_RATE_LIMIT_MAX_ATTEMPTS` | Max login attempts | `10` |
 | `AUTH_OTP_RATE_LIMIT_MAX_ATTEMPTS` | Max OTP attempts | `5` |
+| `INTERNAL_SERVICE_SECRET` | Shared HMAC secret for service-to-service authentication | — |
+| `INTERNAL_SIGNATURE_TTL_MS` | Max age (ms) for internal HMAC signatures | `60000` (1 min) |
 
 ---
 
@@ -1129,16 +1118,6 @@ dotnet test
 - ✅ Auth service business logic
 - ✅ Frontend component rendering
 - ✅ Spring Boot service unit tests
-
----
-
-## 🤝 Contributing
-
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
 
 ---
 

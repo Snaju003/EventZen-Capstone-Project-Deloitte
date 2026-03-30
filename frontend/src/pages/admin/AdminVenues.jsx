@@ -86,7 +86,7 @@ export default function AdminVenues() {
         {isLoading ? (
           <div className="surface-card animate-fade delay-3 p-6 text-center text-slate-600">Loading venues...</div>
         ) : (
-          <div className="animate-fade delay-3 grid grid-cols-1 gap-4 md:grid-cols-2">
+          <div className="animate-fade delay-3 grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {venues.map((venue) => (
               <VenueCard
                 key={venue.id}
@@ -100,7 +100,7 @@ export default function AdminVenues() {
             ))}
 
             {venues.length === 0 ? (
-              <div className="surface-card p-6 text-center text-slate-600 md:col-span-2">No venues available.</div>
+              <div className="surface-card p-6 text-center text-slate-600 md:col-span-2 lg:col-span-3 xl:col-span-4">No venues available.</div>
             ) : null}
           </div>
         )}

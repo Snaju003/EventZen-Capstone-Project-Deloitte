@@ -1,9 +1,10 @@
-import { Suspense, lazy } from "react";
+import { Suspense, lazy, useMemo } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { AdminRoute, RoleRoute } from "@/components/auth/AdminRoute";
 import { Navbar } from "@/components/layout/Navbar";
+import { Footer } from "@/components/layout/Footer";
 import { RouteLoadingFallback } from "@/components/ui/RouteLoadingFallback";
 import { pageTransition } from "@/lib/animations";
 
@@ -28,18 +29,25 @@ const VendorCheckIn = lazy(() => import("@/pages/vendor/VendorCheckIn"));
 const NotificationsPage = lazy(() => import("@/pages/notifications/NotificationsPage"));
 const NotFoundPage = lazy(() => import("@/pages/NotFoundPage"));
 
+/** Routes where Navbar and Footer should be hidden (standalone auth layout) */
+const CHROMELESS_ROUTES = ["/auth", "/verify-otp", "/reset-password", "/forget-password", "/success-message"];
+
 function App() {
   const location = useLocation();
   const isLandingRoute = location.pathname === "/";
+  const isChromeless = useMemo(
+    () => CHROMELESS_ROUTES.includes(location.pathname),
+    [location.pathname],
+  );
 
   return (
-    <div className="app-shell">
-      <Navbar />
+    <div className="app-shell flex min-h-screen flex-col">
+      {!isChromeless && <Navbar />}
       <Suspense fallback={<RouteLoadingFallback message="Loading page..." />}>
         <AnimatePresence mode="wait">
           <motion.div
             key={`${location.pathname}${location.search}`}
-            className={isLandingRoute ? "" : "pt-24 sm:pt-28"}
+            className={`flex-1 ${isChromeless || isLandingRoute ? "" : "pt-24 sm:pt-28"}`}
             initial={pageTransition.initial}
             animate={pageTransition.animate}
             exit={pageTransition.exit}
@@ -75,6 +83,7 @@ function App() {
           </motion.div>
         </AnimatePresence>
       </Suspense>
+      {!isChromeless && <Footer />}
     </div>
   );
 }
