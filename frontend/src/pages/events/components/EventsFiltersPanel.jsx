@@ -155,7 +155,7 @@ export function EventsFiltersPanel({ filters, onFilterChange, onResetFilters, ve
           value={filters.venueId || ALL_VENUES_VALUE}
           onValueChange={(value) => onFilterChange("venueId", value === ALL_VENUES_VALUE ? "" : value)}
         >
-          <SelectTrigger className="!h-11 w-full rounded-xl border-slate-200/80 bg-white/95 shadow-sm">
+          <SelectTrigger className="h-11! w-full rounded-xl border-slate-200/80 bg-white/95 shadow-sm">
             <SelectValue placeholder="All venues" />
           </SelectTrigger>
           <SelectContent>
@@ -180,7 +180,7 @@ export function EventsFiltersPanel({ filters, onFilterChange, onResetFilters, ve
           value={filters.sortDir || "asc"}
           onValueChange={(value) => onFilterChange("sortDir", value)}
         >
-          <SelectTrigger className="!h-11 w-full rounded-xl border-slate-200/80 bg-white/95 shadow-sm">
+          <SelectTrigger className="h-11! w-full rounded-xl border-slate-200/80 bg-white/95 shadow-sm">
             <SelectValue placeholder="Sort by" />
           </SelectTrigger>
           <SelectContent>

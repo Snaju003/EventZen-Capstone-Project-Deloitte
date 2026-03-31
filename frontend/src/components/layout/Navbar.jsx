@@ -33,6 +33,19 @@ const vendorNavLinks = [
   { to: "/vendor/requests", label: "My Requests", icon: Ticket },
 ];
 
+function ActiveNavPill({ animateOnMount = false }) {
+  return (
+    <motion.div
+      layoutId="nav-active-pill"
+      className="absolute inset-0 rounded-lg bg-primary/8 ring-1 ring-primary/15"
+      transition={{ type: "spring", stiffness: 380, damping: 28 }}
+      style={{ zIndex: -1 }}
+      initial={animateOnMount ? { opacity: 0, scaleX: 0.72 } : false}
+      animate={{ opacity: 1, scaleX: 1 }}
+    />
+  );
+}
+
 export function Navbar() {
   const { isAuthenticated, user } = useAuth();
   const location = useLocation();
@@ -40,6 +53,7 @@ export function Navbar() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const [navMounted, setNavMounted] = useState(false);
   const {
     items: notifications,
     unreadCount,
@@ -60,6 +74,8 @@ export function Navbar() {
   const useTransparentLandingNav = isLandingRoute && !isScrolled;
 
   useEffect(() => {
+    setNavMounted(true);
+
     const handleScroll = () => {
       setIsScrolled(window.scrollY > 12);
     };
@@ -144,14 +160,7 @@ export function Navbar() {
                   >
                     <Icon className={`h-3.5 w-3.5 ${active ? "text-primary" : "text-slate-400"}`} />
                     {link.label}
-                    {active && (
-                      <motion.div
-                        layoutId="nav-active-pill"
-                        className="absolute inset-0 rounded-lg bg-primary/8 ring-1 ring-primary/15"
-                        transition={{ type: "spring", stiffness: 380, damping: 28 }}
-                        style={{ zIndex: -1 }}
-                      />
-                    )}
+                    {active && <ActiveNavPill animateOnMount={!navMounted} />}
                   </Link>
                 );
               })}
@@ -168,14 +177,7 @@ export function Navbar() {
                   <>
                     <Icon className={`h-3.5 w-3.5 ${active ? "text-primary" : "text-slate-400"}`} />
                     {link.label}
-                    {active && (
-                      <motion.div
-                        layoutId="nav-active-pill"
-                        className="absolute inset-0 rounded-lg bg-primary/8 ring-1 ring-primary/15"
-                        transition={{ type: "spring", stiffness: 380, damping: 28 }}
-                        style={{ zIndex: -1 }}
-                      />
-                    )}
+                    {active && <ActiveNavPill animateOnMount={!navMounted} />}
                   </>
                 );
                 return link.type === "anchor" ? (

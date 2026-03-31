@@ -1,5 +1,6 @@
 import { ArrowRight } from "lucide-react";
 import { motion } from "framer-motion";
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 
 import { fadeUp, staggerContainer } from "@/lib/animations";
@@ -8,6 +9,18 @@ import { HERO_MOCK_CARDS } from "@/pages/landing/data/landingContent";
 const smooth = { duration: 0.5, ease: "easeOut" };
 
 export function LandingHeroSection() {
+  const [playUnderlineAnimation, setPlayUnderlineAnimation] = useState(false);
+
+  useEffect(() => {
+    const frameId = window.requestAnimationFrame(() => {
+      setPlayUnderlineAnimation(true);
+    });
+
+    return () => {
+      window.cancelAnimationFrame(frameId);
+    };
+  }, []);
+
   return (
     <section className="relative mx-auto flex max-w-6xl flex-col items-center px-5 pb-16 pt-32 text-center sm:px-8 sm:pt-40">
       <motion.div initial="hidden" animate="show" variants={staggerContainer(0.08, 0)} className="flex flex-col items-center">
@@ -42,7 +55,7 @@ export function LandingHeroSection() {
                 strokeLinecap="round"
                 style={{ pathLength: 0 }}
                 initial={{ pathLength: 0, opacity: 0 }}
-                animate={{ pathLength: 1, opacity: 1 }}
+                animate={playUnderlineAnimation ? { pathLength: 1, opacity: 1 } : { pathLength: 0, opacity: 0 }}
                 transition={{ duration: 1.2, delay: 0.8, ease: "easeInOut" }}
               />
             </motion.svg>
