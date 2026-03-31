@@ -11,6 +11,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
+const ALL_VENUES_VALUE = "__all__";
+
 function formatShortDate(date) {
   return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
@@ -116,8 +118,13 @@ function DateRangeCalendarPicker({ startDate, endDate, onStartChange, onEndChang
 export function EventsFiltersPanel({ filters, onFilterChange, onResetFilters, venues }) {
   const hasAnyFilter = Boolean(filters.search || filters.venueId || filters.startDate || filters.endDate || (filters.sortDir && filters.sortDir !== "asc"));
   const venueOptions = [
-    { value: "", label: "All venues" },
-    ...venues.map((venue) => ({ value: venue.id, label: venue.name })),
+    { value: ALL_VENUES_VALUE, label: "All venues" },
+    ...venues
+      .map((venue) => ({
+        value: String(venue?.id || venue?._id || "").trim(),
+        label: String(venue?.name || "Unnamed venue").trim(),
+      }))
+      .filter((venue) => venue.value),
   ];
 
   const sortOptions = [
@@ -145,15 +152,15 @@ export function EventsFiltersPanel({ filters, onFilterChange, onResetFilters, ve
 
       <div>
         <Select
-          value={filters.venueId}
-          onValueChange={(value) => onFilterChange("venueId", value)}
+          value={filters.venueId || ALL_VENUES_VALUE}
+          onValueChange={(value) => onFilterChange("venueId", value === ALL_VENUES_VALUE ? "" : value)}
         >
           <SelectTrigger className="!h-11 w-full rounded-xl border-slate-200/80 bg-white/95 shadow-sm">
             <SelectValue placeholder="All venues" />
           </SelectTrigger>
           <SelectContent>
             {venueOptions.map((opt) => (
-              <SelectItem key={opt.value} value={opt.value || "__all__"}>{opt.label}</SelectItem>
+              <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
             ))}
           </SelectContent>
         </Select>

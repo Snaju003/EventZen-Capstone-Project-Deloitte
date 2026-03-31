@@ -4,6 +4,36 @@ function asArray(value) {
   return Array.isArray(value) ? value : [];
 }
 
+function normalizeVenue(venue) {
+  if (!venue || typeof venue !== "object") {
+    return null;
+  }
+
+  const resolvedId = venue.id || venue._id || "";
+  if (!resolvedId) {
+    return null;
+  }
+
+  return {
+    ...venue,
+    id: String(resolvedId),
+  };
+}
+
+function normalizeVenuesPayload(payload) {
+  const rawVenues = Array.isArray(payload)
+    ? payload
+    : Array.isArray(payload?.items)
+      ? payload.items
+      : Array.isArray(payload?.content)
+        ? payload.content
+        : [];
+
+  return rawVenues
+    .map(normalizeVenue)
+    .filter(Boolean);
+}
+
 function normalizePagedResponse(payload, fallbackPage = 1, fallbackSize = 12) {
   if (Array.isArray(payload)) {
     const items = asArray(payload);
@@ -40,8 +70,12 @@ export async function getFilteredEvents(filters = {}) {
 export async function getEventsPage(params = {}) {
   const fallbackPage = Number(params?.page) || 1;
   const fallbackSize = Number(params?.size) || 12;
+  const normalizedParams = {
+    ...params,
+    venueId: params?.venueId === "__all__" ? undefined : params?.venueId,
+  };
 
-  const response = await apiClient.get("/events/page", { params });
+  const response = await apiClient.get("/events/page", { params: normalizedParams });
   return normalizePagedResponse(response?.data, fallbackPage, fallbackSize);
 }
 
@@ -52,7 +86,7 @@ export async function getEventById(eventId) {
 
 export async function getVenues() {
   const response = await apiClient.get("/venues");
-  return asArray(response?.data);
+  return normalizeVenuesPayload(response?.data);
 }
 
 export async function getVendors() {

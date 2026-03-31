@@ -100,9 +100,27 @@ async function verifyPayment({ user, body, razorpaySecret, getRazorpayClient }) 
   }
 
   try {
-    assertPaymentSignature({ orderId, paymentId, signature, secret: razorpaySecret });
-
     const razorpay = getRazorpayClient();
+    let paymentRecord = null;
+    let signatureError = null;
+
+    try {
+      assertPaymentSignature({ orderId, paymentId, signature, secret: razorpaySecret });
+    } catch (error) {
+      signatureError = error;
+    }
+
+    if (signatureError) {
+      paymentRecord = await razorpay.payments.fetch(paymentId).catch(() => null);
+      const paymentBelongsToOrder = readText(paymentRecord?.order_id) === orderId;
+      const paymentStatus = readText(paymentRecord?.status).toLowerCase();
+      const paymentSettled = paymentStatus === "captured" || paymentStatus === "authorized";
+
+      if (!paymentBelongsToOrder || !paymentSettled) {
+        throw signatureError;
+      }
+    }
+
     const order = await razorpay.orders.fetch(orderId);
     const orderUserId = order?.notes?.userId;
     const orderEventId = order?.notes?.eventId;

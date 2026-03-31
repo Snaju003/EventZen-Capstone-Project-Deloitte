@@ -34,10 +34,12 @@ router.post("/payments/create-order", requireGatewayIdentity, createOrderHandler
 
 router.post("/payments/verify", requireGatewayIdentity, async (req, res, next) => {
   try {
+    const { keySecret } = getRazorpayCredentials();
+
     const verificationResult = await verifyPayment({
       user: req.user,
       body: req.body,
-      razorpaySecret: process.env.RAZORPAY_KEY_SECRET,
+      razorpaySecret: keySecret,
       getRazorpayClient,
     });
 

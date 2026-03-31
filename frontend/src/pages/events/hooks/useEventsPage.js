@@ -65,6 +65,27 @@ export function useEventsPage() {
         return bOpen - aOpen;
       });
 
+      setVenues((previousVenues) => {
+        if (previousVenues.length > 0) {
+          return previousVenues;
+        }
+
+        const derivedMap = new Map();
+        sortedItems.forEach((eventItem) => {
+          const resolvedVenueId = String(eventItem?.venueId || eventItem?.venue?.id || eventItem?.venue?._id || "").trim();
+          if (!resolvedVenueId || derivedMap.has(resolvedVenueId)) {
+            return;
+          }
+
+          derivedMap.set(resolvedVenueId, {
+            id: resolvedVenueId,
+            name: String(eventItem?.venue?.name || "").trim() || "Venue",
+          });
+        });
+
+        return derivedMap.size > 0 ? Array.from(derivedMap.values()) : previousVenues;
+      });
+
       setEvents(sortedItems);
       setPagination({
         page: pageResponse.page,
